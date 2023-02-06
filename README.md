@@ -3,7 +3,7 @@
 **Group members:**
 - Johan Ølgaard (jlh601)
 - Alon Clausen (smr136)
-- C
+- TBA
 
 This repository contains  
 1. Inaugural project. 
