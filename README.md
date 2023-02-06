@@ -1,4 +1,4 @@
-# \[Valros\]
+# Valros
 
 **Group members:**
 - Johan Ølgaard (jlh601)
