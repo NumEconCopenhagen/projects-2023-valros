@@ -1,8 +1,8 @@
-# \[Group name\]
+# \[Valros\]
 
 **Group members:**
-- A
-- B
+- Johan Ølgaard (jlh601)
+- Alon Clausen (smr136)
 - C
 
 This repository contains  
