@@ -3,7 +3,7 @@
 **Group members:**
 - Johan Ølgaard (jlh601)
 - Alon Clausen (smr136)
-- Valdemar GULD (gvz104)
+- Valdemar GULDROS (gvz104)
 
 This repository contains  
 1. Inaugural project.
