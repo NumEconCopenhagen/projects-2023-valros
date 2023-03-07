@@ -1,3 +1,4 @@
+import numpy as np
 #Defining functions used in utility function
 
 #Defining the function C
@@ -6,12 +7,11 @@ def C(Lm,Lf,wm=1,wf=1):
 
 #Definition of the function H
 def H(Hm,Hf,alpha=0.5,sigma=1):
-    if sigma == 0:
-        return min(Hm,Hf)
-    elif sigma == 1:
-        return Hm**(1-alpha)*Hf**alpha
-    else:
-        return ((1-alpha)Hm**((sigma-1)/sigma)+alpha*Hf**((sigma-1)/sigma))**(sigma/(sigma-1))
+    h = np.zeros(len(Hm))
+    h[sigma == 0] = np.minimum(Hm,Hf)
+    h[sigma == 1] = Hm**(1-alpha)*Hf**alpha
+    h[sigma != 0 and sigma != 1] = ((1-alpha)*Hm**((sigma-1)/sigma)+alpha*Hf**((sigma-1)/sigma))**(sigma/(sigma-1))
+    return h
 
 #Definition of the function Q
 def Q(C,H,omega=0.5):
