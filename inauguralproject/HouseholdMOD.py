@@ -54,8 +54,13 @@ class HouseholdSpecializationModelClass:
         C = par.wM*LM + par.wF*LF
 
         # b. home production
-        H = HM**(1-par.alpha)*HF**par.alpha #det her skal vi ændre til vores kode hvor den tager højde for sigma, her kun defineret for sigma = 1
-
+        if par.sigma == 1:
+            H = HM**(1-par.alpha)*HF**par.alpha
+        elif par.sigm == 0:
+            H = np.minimum(HM,HF)
+        else:
+            H = ((1-par.alpha)*HM**((par.sigma-1)/par.sigma)+par.alpha*HF**((par.sigma-1)/par.sigma))**(par.sigma/(par.sigma-1))
+        
         # c. total consumption utility
         Q = C**par.omega*H**(1-par.omega)
         utility = np.fmax(Q,1e-8)**(1-par.rho)/(1-par.rho)
