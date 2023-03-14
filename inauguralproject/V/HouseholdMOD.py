@@ -116,10 +116,34 @@ class HouseholdSpecializationModelClass:
 
         pass    
 
-    def solve_wF_vec(self,discrete=False):
-        """ solve model for vector of female wages """
-
-        pass
+    def solve_wF_vec(self, discrete=False):
+    """ solve model for vector of female wages """
+    
+    par = self.par
+    sol = self.sol
+    
+    # set up vector to store results
+    HF_HM_ratios = np.zeros(par.wF_vec.size)
+    
+    for i, wF in enumerate(par.wF_vec):
+        # set female wage
+        par.wF = wF
+        
+        # solve model
+        if discrete:
+            opt = self.solve_discrete()
+        else:
+            opt = self.solve()
+        
+        # record HF/HM ratio
+        sol.HM = opt.HM
+        sol.HF = opt.HF
+        HF_HM_ratios[i] = sol.HF / sol.HM
+    
+    # store ratios in solution namespace
+    sol.HF_HM_ratios = HF_HM_ratios
+    
+    return HF_HM_ratios
 
     def run_regression(self):
         """ run regression """
