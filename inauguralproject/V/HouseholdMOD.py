@@ -116,8 +116,9 @@ class HouseholdSpecializationModelClass:
 
         pass    
 
+    
     def solve_wF_vec(self, discrete=False):
-    """ solve model for vector of female wages """
+    #""" solve model for vector of female wages """
     
     par = self.par
     sol = self.sol
@@ -141,9 +142,9 @@ class HouseholdSpecializationModelClass:
         HF_HM_ratios[i] = sol.HF / sol.HM
     
     # store ratios in solution namespace
-    sol.HF_HM_ratios = HF_HM_ratios
+        sol.HF_HM_ratios = HF_HM_ratios
     
-    return HF_HM_ratios
+        return HF_HM_ratios
 
     def run_regression(self):
         """ run regression """
