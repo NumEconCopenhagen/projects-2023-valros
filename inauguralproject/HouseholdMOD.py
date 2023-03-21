@@ -78,7 +78,7 @@ class HouseholdSpecializationModelClass:
         
         par = self.par
         sol = self.sol
-        opt = SimpleNamespace()
+        opt = self.opt = SimpleNamespace()
         
         # a. all possible choices
         x = np.linspace(0,24,49)
