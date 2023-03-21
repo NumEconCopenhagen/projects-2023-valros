@@ -1,4 +1,3 @@
-
 from types import SimpleNamespace
 
 import numpy as np
@@ -78,7 +77,7 @@ class HouseholdSpecializationModelClass:
         
         par = self.par
         sol = self.sol
-        opt = self.opt = SimpleNamespace()
+        opt = SimpleNamespace()
         
         # a. all possible choices
         x = np.linspace(0,24,49)
@@ -112,14 +111,65 @@ class HouseholdSpecializationModelClass:
         return opt
 
     def solve(self,do_print=False):
-        """ solve model continously """
+        """ solve model """
+        
+        par = self.par
+        sol = self.sol
+        opt = SimpleNamespace()
+        
+        # a. calculate utility
+        def neg_utility(choices):
+            LM, HM, LF, HF = choices
+            return -self.calc_utility(LM, HM, LF, HF)
 
-        pass    
+        # b. solve optimization problem
+        x0 = [12, 12, 12, 12] # initial guess
+        bounds = [(0, 24), (0, 24), (0, 24), (0, 24)] # bounds on choices
+        opt_result = optimize.minimize(neg_utility, x0, bounds=bounds)
 
-    def solve_wF_vec(self,discrete=False):
+        opt.LM = opt_result.x[0]
+        opt.HM = opt_result.x[1]
+        opt.LF = opt_result.x[2]
+        opt.HF = opt_result.x[3]
+
+        # c. print
+        if do_print:
+            for k,v in opt.__dict__.items():
+                print(f'{k} = {v:6.4f}')
+
+        return opt
+
+
+    
+    def solve_wF_vec(self, discrete=False):
         """ solve model for vector of female wages """
+    
+        par = self.par
+        sol = self.sol
+        
+        # set up vector to store results
+        HF_HM_ratios = np.zeros(par.wF_vec.size)
+        
+        for i, wF in enumerate(par.wF_vec):
+            # set female wage
+            par.wF = wF
+                
+            # solve model
+            if discrete == True:
+                opt = self.solve_discrete()
+            else:
+                opt = self.solve()
+                
+            # record HF/HM ratio
+            sol.HM = opt.HM
+            sol.HF = opt.HF
+            HF_HM_ratios[i] = sol.HF / sol.HM
+        
+        # store ratios in solution namespace
+        sol.HF_HM_ratios = HF_HM_ratios
+            
+        return HF_HM_ratios
 
-        pass
 
     def run_regression(self):
         """ run regression """
