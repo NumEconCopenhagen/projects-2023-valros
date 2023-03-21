@@ -109,11 +109,7 @@ class HouseholdSpecializationModelClass:
             for k,v in opt.__dict__.items():
                 print(f'{k} = {v:6.4f}')
 
-        return opt
-
-    def target_function(self,x,wM,wF):
-            """ target function for continous solution """
-            return -self.calc_utility(x[0],x[1],x[2],x[3])    
+        return opt   
 
     def solve_continous(self,do_print=False):
         """ solve model continously """
@@ -122,16 +118,20 @@ class HouseholdSpecializationModelClass:
         sol = self.sol
         opt = self.opt = SimpleNamespace()
 
-        x0 = [12,12,12,12]
+        def target_function(x,wM,wF):
+            return -self.calc_utility(x[0],x[1],x[2],x[3]) 
+
+        #Starting value, bounds and constraints
+        x0=[12,12,12,12]
         bounds = ((0,24),(0,24),(0,24),(0,24))
         constraints = ({'type': 'ineq', 'fun': lambda x: 24 - x[0] - x[1]},{'type': 'ineq', 'fun': lambda x: 24 - x[2] - x[3]})
 
         #Continous solution with the help of the scipy.optimize package
-        solution = optimize.minimize(self.target_function, 
+        solution = optimize.minimize(target_function, 
                                      x0,
-                                     args= (par.wM,par.wF), 
+                                     args= (par.wM,par.wF),
                                      method='SLSQP', 
-                                     bounds=bounds, 
+                                     bounds=bounds,
                                      constraints=constraints)
         
         opt.LM = solution.x[0]
