@@ -116,10 +116,22 @@ class HouseholdSpecializationModelClass:
 
         pass    
 
-    def solve_wF_vec(self,discrete=False):
-        """ solve model for vector of female wages """
+    def solve_continous(self,do_print=False):
+        """ solve model continously """
+        #Stadig ikke færdig med denne funktion
+        par = self.par
+        sol = self.sol
+        opt = self.opt = SimpleNamespace()
 
-        pass
+        #Continous solution with the help of the scipy.optimize package
+        solution = optimize.minimize(self.calc_utility(), [12,12,12,12], method='SLSQP', bounds=((0,24),(0,24),(0,24),(0,24)), constraints=({'type': 'ineq', 'fun': lambda x: 24 - x[0] - x[1]},{'type': 'ineq', 'fun': lambda x: 24 - x[2] - x[3]}))
+        
+        opt.LM = solution.x[0]
+        opt.HM = solution.x[1]
+        opt.LF = solution.x[2]
+        opt.HF = solution.x[3]
+
+        return opt        
 
     def run_regression(self):
         """ run regression """
