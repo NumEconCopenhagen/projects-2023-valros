@@ -14,7 +14,7 @@ class HouseholdSpecializationModelClass:
 
         # a. create namespaces
         par = self.par = SimpleNamespace()
-        sol = self.sol = SimpleNamespace()
+        opt = self.opt = SimpleNamespace()
 
         # b. preferences
         par.rho = 2.0
@@ -36,19 +36,19 @@ class HouseholdSpecializationModelClass:
         par.beta1_target = -0.1
 
         # f. solution
-        sol.LM_vec = np.zeros(par.wF_vec.size)
-        sol.HM_vec = np.zeros(par.wF_vec.size)
-        sol.LF_vec = np.zeros(par.wF_vec.size)
-        sol.HF_vec = np.zeros(par.wF_vec.size)
+        opt.LM_vec = np.zeros(par.wF_vec.size)
+        opt.HM_vec = np.zeros(par.wF_vec.size)
+        opt.LF_vec = np.zeros(par.wF_vec.size)
+        opt.HF_vec = np.zeros(par.wF_vec.size)
 
-        sol.beta0 = np.nan
-        sol.beta1 = np.nan
+        opt.beta0 = np.nan
+        opt.beta1 = np.nan
 
     def calc_utility(self,LM,HM,LF,HF):
         """ calculate utility """
 
         par = self.par
-        sol = self.sol
+        opt = self.opt
 
         # a. consumption of market goods
         C = par.wM*LM + par.wF*LF
@@ -77,8 +77,7 @@ class HouseholdSpecializationModelClass:
         """ solve model discretely """
         
         par = self.par
-        sol = self.sol
-        opt = self.opt = SimpleNamespace()
+        opt = self.opt
         
         # a. all possible choices
         x = np.linspace(0,24,49)
@@ -115,16 +114,16 @@ class HouseholdSpecializationModelClass:
         """ solve model continously """
         #Stadig ikke færdig med denne funktion
         par = self.par
-        sol = self.sol
-        opt = self.opt = SimpleNamespace()
+        opt = self.opt
 
+        #Target function
         def target_function(x,wM,wF):
             return -self.calc_utility(x[0],x[1],x[2],x[3]) 
 
         #Starting value, bounds and constraints
-        x0=[12,12,12,12]
-        bounds = ((0,24),(0,24),(0,24),(0,24))
-        constraints = ({'type': 'ineq', 'fun': lambda x: 24 - x[0] - x[1]},{'type': 'ineq', 'fun': lambda x: 24 - x[2] - x[3]})
+        x0=[12,12,12,12] #Initial guess
+        bounds = ((0,24),(0,24),(0,24),(0,24)) #Bounds
+        constraints = ({'type': 'ineq', 'fun': lambda x: 24 - x[0] - x[1]},{'type': 'ineq', 'fun': lambda x: 24 - x[2] - x[3]}) #Constraints
 
         #Continous solution with the help of the scipy.optimize package
         solution = optimize.minimize(target_function, 
@@ -132,25 +131,55 @@ class HouseholdSpecializationModelClass:
                                      args= (par.wM,par.wF),
                                      method='SLSQP', 
                                      bounds=bounds,
-                                     constraints=constraints)
+                                     constraints=constraints
+                                     )
         
         opt.LM = solution.x[0]
         opt.HM = solution.x[1]
         opt.LF = solution.x[2]
         opt.HF = solution.x[3]
 
-        return opt        
+        return opt
 
+    def solve_wF_vec(self, discrete=False):
+        """ solve model for different wF """
+
+        par = self.par
+        opt = self.opt
+
+        logHFHM = np.zeros(par.wF_vec.size)
+        optHF = np.zeros(par.wF_vec.size)
+        optHM = np.zeros(par.wF_vec.size)
+
+        for i,wF in enumerate(par.wF_vec):
+            par.wF = wF
+
+            if discrete == True:
+                opt = self.solve_discrete()
+            else:
+                opt = self.solve_continous()
+
+            opt.HM = opt.HM
+            opt.HF = opt.HF
+            logHFHM[i] = np.log(opt.HF/opt.HM)
+            optHM[i] = opt.HM
+            optHF[i] = opt.HF
+
+        opt.logHFHM = logHFHM
+        opt.HM_vec = optHM
+        opt.HF_vec = optHF
+        return opt
+    
     def run_regression(self):
         """ run regression """
 
         par = self.par
-        sol = self.sol
+        opt = self.opt
 
         x = np.log(par.wF_vec)
-        y = np.log(sol.HF_vec/sol.HM_vec)
+        y = np.log(opt.HF_vec/opt.HM_vec)
         A = np.vstack([np.ones(x.size),x]).T
-        sol.beta0,sol.beta1 = np.linalg.lstsq(A,y,rcond=None)[0]
+        opt.beta0,opt.beta1 = np.linalg.lstsq(A,y,rcond=None)[0]
     
     def estimate(self,alpha=None,sigma=None):
         """ estimate alpha and sigma """
