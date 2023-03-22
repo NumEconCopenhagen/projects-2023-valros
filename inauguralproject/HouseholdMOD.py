@@ -154,8 +154,7 @@ class HouseholdSpecializationModelClass:
     
     def estimate(self,alpha=None,sigma=None):
 
-        # 1. Define the objective function
-    def objective(params, model):
+        # Unpack the parameters
         alpha, sigma = params
         model.par.alpha = alpha
         model.par.sigma = sigma
