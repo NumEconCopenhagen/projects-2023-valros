@@ -150,6 +150,8 @@ class HouseholdSpecializationModelClass:
         logHFHM = np.zeros(par.wF_vec.size)
         optHF = np.zeros(par.wF_vec.size)
         optHM = np.zeros(par.wF_vec.size)
+        optLF = np.zeros(par.wF_vec.size)
+        optLM = np.zeros(par.wF_vec.size)
 
         for i,wF in enumerate(par.wF_vec):
             par.wF = wF
@@ -164,10 +166,14 @@ class HouseholdSpecializationModelClass:
             logHFHM[i] = np.log(opt.HF/opt.HM)
             optHM[i] = opt.HM
             optHF[i] = opt.HF
+            optLF[i] = opt.LF
+            optLM[i] = opt.LM
 
         opt.logHFHM = logHFHM
         opt.HM_vec = optHM
         opt.HF_vec = optHF
+        opt.LF_vec = optLF
+        opt.LM_vec = optLM
         return opt
     
     def run_regression(self):
