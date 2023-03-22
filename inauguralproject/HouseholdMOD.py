@@ -109,17 +109,37 @@ class HouseholdSpecializationModelClass:
             for k,v in opt.__dict__.items():
                 print(f'{k} = {v:6.4f}')
 
-        return opt
+        return opt   
 
-    def solve(self,do_print=False):
+    def solve_continous(self,do_print=False):
         """ solve model continously """
+        #Stadig ikke færdig med denne funktion
+        par = self.par
+        sol = self.sol
+        opt = self.opt = SimpleNamespace()
 
-        pass    
+        def target_function(x,wM,wF):
+            return -self.calc_utility(x[0],x[1],x[2],x[3]) 
 
-    def solve_wF_vec(self,discrete=False):
-        """ solve model for vector of female wages """
+        #Starting value, bounds and constraints
+        x0=[12,12,12,12]
+        bounds = ((0,24),(0,24),(0,24),(0,24))
+        constraints = ({'type': 'ineq', 'fun': lambda x: 24 - x[0] - x[1]},{'type': 'ineq', 'fun': lambda x: 24 - x[2] - x[3]})
 
-        pass
+        #Continous solution with the help of the scipy.optimize package
+        solution = optimize.minimize(target_function, 
+                                     x0,
+                                     args= (par.wM,par.wF),
+                                     method='SLSQP', 
+                                     bounds=bounds,
+                                     constraints=constraints)
+        
+        opt.LM = solution.x[0]
+        opt.HM = solution.x[1]
+        opt.LF = solution.x[2]
+        opt.HF = solution.x[3]
+
+        return opt        
 
     def run_regression(self):
         """ run regression """
