@@ -188,18 +188,3 @@ class HouseholdSpecializationModelClass:
 
         pass
 
-    def __init__(self):
-        super().__init__()
-        self.history = []
-
-    def run_regression(self):
-        super().run_regression()
-        self.history.append({
-            'alpha': self.par.alpha,
-            'sigma': self.par.sigma,
-            'beta0': self.sol.beta0,
-            'beta1': self.sol.beta1,
-            'HF_HM_ratios': self.sol.HF_HM_ratios.copy()
-        })
-
-        
