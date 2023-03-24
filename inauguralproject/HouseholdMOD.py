@@ -208,4 +208,4 @@ class HouseholdSpecializationModelClass:
                                     method='Nelder-Mead',
                                     bounds=bounds)
         opt.alpha = solution.x[0]
-        opt.sigma = solution.x[1]   
+        opt.sigma = solution.x[1]
