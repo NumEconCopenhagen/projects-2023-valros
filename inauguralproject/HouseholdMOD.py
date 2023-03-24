@@ -190,18 +190,4 @@ class HouseholdSpecializationModelClass:
     
     def estimate(self,alpha=None,sigma=None):
 
-        # Unpack the parameters
-        alpha, sigma = params
-        model.par.alpha = alpha
-        model.par.sigma = sigma
-        
-        # Solve the model for the vector of female wages and run the regression
-        model.solve_wF_vec()
-        model.run_regression()
-        
-        beta0_diff = (model.par.beta0_target - model.sol.beta0)**2
-        beta1_diff = (model.par.beta1_target - model.sol.beta1)**2
-        
-        return beta0_diff + beta1_diff
-
         pass
