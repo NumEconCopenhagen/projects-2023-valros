@@ -188,25 +188,19 @@ class HouseholdSpecializationModelClass:
         A = np.vstack([np.ones(x.size),x]).T
         opt.beta0,opt.beta1 = np.linalg.lstsq(A,y,rcond=None)[0]
     
-    def beta_target(self,alpha,sigma):
-        """ target function for beta """
+    def estimate(self):
+        """ estimate alpha and sigma """
         par = self.par
         opt = self.opt
 
-        self.run_regression()
-        return (opt.beta0-par.beta0_target)**2  + (opt.beta1-par.beta1_target)**2
-    
-    def estimate(self,alpha=None,sigma=None):
-        """ estimate model """
-        par = self.par
-        opt = self.opt
-
-        def target(alpha,sigma):
+        def target(x):
+            par.alpha, par.sigma = x
+            self.solve_wF_vec()
             self.run_regression()
             return (opt.beta0-par.beta0_target)**2  + (opt.beta1-par.beta1_target)**2
 
         x0=[0.5,1] #Initial guess
-        bounds = ((0,1),(0,2)) #Bounds
+        bounds = ((0,1),(0,5)) #Bounds
 
         #Continous solution with the help of the scipy.optimize package
         solution = optimize.minimize(target,
@@ -214,6 +208,4 @@ class HouseholdSpecializationModelClass:
                                     method='Nelder-Mead',
                                     bounds=bounds)
         opt.alpha = solution.x[0]
-        opt.sigma = solution.x[1]
-
-        return opt        
+        opt.sigma = solution.x[1]   
