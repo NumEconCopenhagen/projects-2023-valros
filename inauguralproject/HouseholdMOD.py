@@ -118,20 +118,21 @@ class HouseholdSpecializationModelClass:
 
         #Target function
         def target_function(x,wM,wF):
-            return -self.calc_utility(x[0],x[1],x[2],x[3]) 
+            if x[0]+x[1] > 24 or x[2]+x[3] > 24:
+                return np.inf
+            else:
+                return -self.calc_utility(x[0],x[1],x[2],x[3]) 
 
         #Starting value, bounds and constraints
-        x0=[12,12,12,12] #Initial guess
+        x0=[10,10,10,10] #Initial guess
         bounds = ((0,24),(0,24),(0,24),(0,24)) #Bounds
-        constraints = ({'type': 'ineq', 'fun': lambda x: 24 - x[0] - x[1]},{'type': 'ineq', 'fun': lambda x: 24 - x[2] - x[3]}) #Constraints
 
         #Continous solution with the help of the scipy.optimize package
         solution = optimize.minimize(target_function, 
                                      x0,
                                      args= (par.wM,par.wF),
-                                     method='SLSQP', 
-                                     bounds=bounds,
-                                     constraints=constraints
+                                     method='Nelder-Mead', 
+                                     bounds=bounds
                                      )
         
         opt.LM = solution.x[0]
