@@ -44,6 +44,9 @@ class HouseholdSpecializationModelClass:
         opt.beta0 = np.nan
         opt.beta1 = np.nan
 
+        # g. extended model
+        par.kappa = 1
+    
     def calc_utility(self,LM,HM,LF,HF):
         """ calculate utility """
 
@@ -66,10 +69,10 @@ class HouseholdSpecializationModelClass:
         utility = np.fmax(Q,1e-8)**(1-par.rho)/(1-par.rho)
 
         # d. disutlity of work
-        epsilon_ = 1+1/par.epsilon
-        TM = LM+HM
-        TF = LF+HF
-        disutility = par.nu*(TM**epsilon_/epsilon_+TF**epsilon_/epsilon_)
+        epsilon_ = 1 + 1 / par.epsilon
+        TM = LM + HM
+        TF = LF + HF
+        disutility = par.nu * (TM ** epsilon_ / epsilon_ + par.kappa * TF ** epsilon_ / epsilon_)
         
         return utility - disutility
 
