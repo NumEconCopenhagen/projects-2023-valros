@@ -43,6 +43,10 @@ class HouseholdSpecializationModelClass:
 
         opt.beta0 = np.nan
         opt.beta1 = np.nan
+        opt.residual = np.nan
+
+        # g. extended model
+        par.kappa = 1
 
     def calc_utility(self,LM,HM,LF,HF):
         """ calculate utility """
@@ -69,7 +73,7 @@ class HouseholdSpecializationModelClass:
         epsilon_ = 1+1/par.epsilon
         TM = LM+HM
         TF = LF+HF
-        disutility = par.nu*(TM**epsilon_/epsilon_+TF**epsilon_/epsilon_)
+        disutility = par.nu*(TM**epsilon_/epsilon_+par.kappa*(TF**epsilon_)/epsilon_)
         
         return utility - disutility
 
@@ -188,24 +192,69 @@ class HouseholdSpecializationModelClass:
         A = np.vstack([np.ones(x.size),x]).T
         opt.beta0,opt.beta1 = np.linalg.lstsq(A,y,rcond=None)[0]
     
-    def estimate(self):
-        """ estimate alpha and sigma """
+    def estimate(self,mode='normal'):
+        """ estimate model """
         par = self.par
         opt = self.opt
+        
+        # Estimating the model depending on the mode
+        # Normal mode is the standard mode, where alpha and sigma is estimated
+        if mode == 'normal':
+            def target(x):
+                par.alpha, par.sigma = x
+                self.solve_wF_vec()
+                self.run_regression()
+                opt.residual = (opt.beta0-par.beta0_target)**2  + (opt.beta1-par.beta1_target)**2
+                return opt.residual
+            
+            x0=[0.5,1] #Initial guess
+            bounds = ((0,1),(0,5)) #Bounds
 
-        def target(x):
-            par.alpha, par.sigma = x
-            self.solve_wF_vec()
-            self.run_regression()
-            return (opt.beta0-par.beta0_target)**2  + (opt.beta1-par.beta1_target)**2
+            #Continous solution with the help of the scipy.optimize package
+            solution = optimize.minimize(target,
+                                        x0,
+                                        method='Nelder-Mead',
+                                        bounds=bounds)
+            opt.alpha = solution.x[0]
+            opt.sigma = solution.x[1]
 
-        x0=[0.5,1] #Initial guess
-        bounds = ((0,1),(0,5)) #Bounds
+        # Extended mode where kappa is estimated as well as sigma
+        elif mode == 'extended':
+            
+            def target(x):
+                par.kappa, par.sigma = x
+                self.solve_wF_vec()
+                self.run_regression()
+                opt.residual = (opt.beta0-par.beta0_target)**2  + (opt.beta1-par.beta1_target)**2
+                return opt.residual
+            
+            x0=[1.0,0.1] #Initial guess
+            bounds = ((0,5),(0,5)) #Bounds
+            solution = optimize.minimize(target,
+                                        x0,
+                                        method='Nelder-Mead',
+                                        bounds=bounds)
+            opt.kappa = solution.x[0]
+            opt.sigma = solution.x[1]
 
-        #Continous solution with the help of the scipy.optimize package
-        solution = optimize.minimize(target,
-                                    x0,
-                                    method='Nelder-Mead',
-                                    bounds=bounds)
-        opt.alpha = solution.x[0]
-        opt.sigma = solution.x[1]
+        # Only sigma mode, where only sigma is estimated
+        elif mode == 'only_sigma':
+
+            def target(x):
+                par.sigma = x
+                self.solve_wF_vec()
+                self.run_regression()
+                opt.residual = (opt.beta0-par.beta0_target)**2  + (opt.beta1-par.beta1_target)**2
+                return opt.residual
+
+            x0=[0.1] #Initial guess
+            bounds = ((0,5)) #Bounds
+
+            #Continous solution with the help of the scipy.optimize package
+            solution = optimize.minimize_scalar(target,
+                                        x0,
+                                        method='Bounded',
+                                        bounds=bounds)
+            opt.sigma = solution.x
+        else:
+            print('Mode not recognized. Available modes are: normal (default), extended and only_sigma')
