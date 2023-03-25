@@ -43,15 +43,7 @@ class HouseholdSpecializationModelClass:
 
         opt.beta0 = np.nan
         opt.beta1 = np.nan
-        
-        # g. preferences for home production
-        par.theta_M = 1.0  # Preference for home production for males
-        par.theta_F = 1.0  # Preference for home production for females
 
-        # Skill factors
-        par.sM = 1.0
-        par.sF = 1.0
-        
     def calc_utility(self,LM,HM,LF,HF):
         """ calculate utility """
 
@@ -74,11 +66,10 @@ class HouseholdSpecializationModelClass:
         utility = np.fmax(Q,1e-8)**(1-par.rho)/(1-par.rho)
 
         # d. disutlity of work
-        epsilon_ = 1 + 1 / par.epsilon
-        TM = LM + HM
-        TF = LF + HF
-        disutility = par.nu * ((TM * par.theta_M)**epsilon_ / epsilon_ + (TF * par.theta_F)**epsilon_ / epsilon_)
-
+        epsilon_ = 1+1/par.epsilon
+        TM = LM+HM
+        TF = LF+HF
+        disutility = par.nu*(TM**epsilon_/epsilon_+TF**epsilon_/epsilon_)
         
         return utility - disutility
 
@@ -119,39 +110,37 @@ class HouseholdSpecializationModelClass:
 
         return opt   
 
-    def solve_continous(self, do_print=False):
-        """ solve model continuously """
-
+    def solve_continous(self,do_print=False):
+        """ solve model continously """
+        #Stadig ikke færdig med denne funktion
         par = self.par
         opt = self.opt
 
-        # Target function
-        def target_function(x, wM, wF):
-            if x[0] + x[1] > 24 or x[2] + x[3] > 24:
+        #Target function
+        def target_function(x,wM,wF):
+            if x[0]+x[1] > 24 or x[2]+x[3] > 24:
                 return np.inf
             else:
-                return -self.calc_utility(x[0], x[1], x[2], x[3])
+                return -self.calc_utility(x[0],x[1],x[2],x[3]) 
 
-        # Starting value, bounds and constraints
-        x0 = [10, 10, 10, 10]  # Initial guess
-        bounds = ((0, 24), (0, 24), (0, 24), (0, 24))  # Bounds
+        #Starting value, bounds and constraints
+        x0=[10,10,10,10] #Initial guess
+        bounds = ((0,24),(0,24),(0,24),(0,24)) #Bounds
 
-        # Continuous solution with the help of the scipy.optimize package
-        solution = optimize.minimize(target_function,
-                                    x0,
-                                    args=(par.wM, par.wF),
-                                    method='L-BFGS-B',
-                                    bounds=bounds
-                                    )
-
+        #Continous solution with the help of the scipy.optimize package
+        solution = optimize.minimize(target_function, 
+                                     x0,
+                                     args= (par.wM,par.wF),
+                                     method='Nelder-Mead', 
+                                     bounds=bounds
+                                     )
+        
         opt.LM = solution.x[0]
         opt.HM = solution.x[1]
         opt.LF = solution.x[2]
         opt.HF = solution.x[3]
 
         return opt
-
-
 
     def solve_wF_vec(self, discrete=False):
         """ solve model for different wF """
@@ -220,17 +209,26 @@ class HouseholdSpecializationModelClass:
                                     bounds=bounds)
         opt.alpha = solution.x[0]
         opt.sigma = solution.x[1]
+    
+    def calibrate_model(self):
+        """ calibrate alpha and sigma """
 
-        
-    def calc_utility_5(self, LM, HM, LF, HF):
-        """ calculate utility """
-        
         par = self.par
         opt = self.opt
 
-        # a. consumption of market goods
-        C = par.wM * LM + par.wF * LF
+        # objective function
+        def objective(x):
+            par.alpha, par.sigma = x
+            self.solve_wF_vec()
+            self.run_regression()
+            return (opt.beta0 - par.beta0_target)**2 + (opt.beta1 - par.beta1_target)**2
 
-        # b. home production
-        H = par.AM * HM**(1-par.alpha) * par.AF * HF**par.alpha
-        
+        x0 = [0.5, 1]  # Initial guess
+        bounds = ((0, 1), (0, 5))  # Bounds
+
+        # Calibrate using the scipy.optimize package
+        solution = optimize.minimize(objective, x0, method='Nelder-Mead', bounds=bounds)
+        opt.alpha = solution.x[0]
+        opt.sigma = solution.x[1]
+
+        return opt
