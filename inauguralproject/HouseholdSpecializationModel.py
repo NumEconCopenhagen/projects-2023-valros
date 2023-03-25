@@ -19,7 +19,8 @@ class HouseholdSpecializationModelClass:
         # b. preferences
         par.rho = 2.0
         par.nu = 0.001
-        par.epsilon = 1.0
+        par.epsilonM = 1.0
+        par.epsilonF = 1.0
         par.omega = 0.5 
 
         # c. household production
@@ -70,10 +71,11 @@ class HouseholdSpecializationModelClass:
         utility = np.fmax(Q,1e-8)**(1-par.rho)/(1-par.rho)
 
         # d. disutlity of work
-        epsilon_ = 1+1/par.epsilon
+        epsilon_M = 1+1/par.epsilonM
+        epsilon_F = 1+1/par.epsilonF
         TM = LM+HM
         TF = LF+HF
-        disutility = par.nu*(TM**epsilon_/epsilon_+par.kappa*(TF**epsilon_)/epsilon_)
+        disutility = par.nu*(TM**epsilon_M/epsilon_M+par.kappa*(TF**epsilon_F)/epsilon_F)
         
         return utility - disutility
 
@@ -114,7 +116,7 @@ class HouseholdSpecializationModelClass:
 
         return opt   
 
-    def solve_continous(self,do_print=False):
+    def solve_continous(self,do_print=False,basin=False):
         """ solve model continously """
         #Stadig ikke færdig med denne funktion
         par = self.par
@@ -131,13 +133,21 @@ class HouseholdSpecializationModelClass:
         x0=[10,10,10,10] #Initial guess
         bounds = ((0,24),(0,24),(0,24),(0,24)) #Bounds
 
-        #Continous solution with the help of the scipy.optimize package
-        solution = optimize.minimize(target_function, 
-                                     x0,
-                                     args= (par.wM,par.wF),
-                                     method='Nelder-Mead', 
-                                     bounds=bounds
-                                     )
+        #Continous solution with the help of the scipy.optimize package.
+        #The function can either use the basinhopping method or the minimize method.
+        if basin:
+            solution = optimize.basinhopping(target_function,
+                                                x0,
+                                                minimizer_kwargs={'args': (par.wM,par.wF),'method':'Nelder-Mead','bounds':bounds},
+                                                niter=10, 
+                                                niter_success=3)
+        else:
+            solution = optimize.minimize(target_function, 
+                                         x0,
+                                         args= (par.wM,par.wF),
+                                         method='Nelder-Mead', 
+                                         bounds=bounds
+                                         )
         
         opt.LM = solution.x[0]
         opt.HM = solution.x[1]
@@ -146,7 +156,7 @@ class HouseholdSpecializationModelClass:
 
         return opt
 
-    def solve_wF_vec(self, discrete=False):
+    def solve_wF_vec(self, discrete=False, basin=False):
         """ solve model for different wF """
 
         par = self.par
@@ -161,8 +171,10 @@ class HouseholdSpecializationModelClass:
         for i,wF in enumerate(par.wF_vec):
             par.wF = wF
 
-            if discrete == True:
+            if discrete:
                 opt = self.solve_discrete()
+            elif basin:
+                opt = self.solve_continous(basin=True)
             else:
                 opt = self.solve_continous()
 
@@ -208,7 +220,7 @@ class HouseholdSpecializationModelClass:
                 return opt.residual
             
             x0=[0.5,1] #Initial guess
-            bounds = ((0,1),(0,5)) #Bounds
+            bounds = ((0,1),(0,1)) #Bounds
 
             #Continous solution with the help of the scipy.optimize package
             solution = optimize.minimize(target,
@@ -229,7 +241,7 @@ class HouseholdSpecializationModelClass:
                 return opt.residual
             
             x0=[1.0,0.1] #Initial guess
-            bounds = ((0,5),(0,5)) #Bounds
+            bounds = ((0,5),(0,1)) #Bounds
             solution = optimize.minimize(target,
                                         x0,
                                         method='Nelder-Mead',
@@ -248,7 +260,7 @@ class HouseholdSpecializationModelClass:
                 return opt.residual
 
             x0=[0.1] #Initial guess
-            bounds = ((0,5)) #Bounds
+            bounds = ((0,1)) #Bounds
 
             #Continous solution with the help of the scipy.optimize package
             solution = optimize.minimize_scalar(target,
@@ -256,5 +268,28 @@ class HouseholdSpecializationModelClass:
                                         method='Bounded',
                                         bounds=bounds)
             opt.sigma = solution.x
+
+        # Extended mode where epsilon is estimated as well as sigma
+        elif mode == 'extended_epsilon':
+            
+            #Target function for the basinhopping algorithm
+            def target(x):
+                par.epsilonF, par.sigma = x
+                self.solve_wF_vec()
+                self.run_regression()
+                opt.residual = (opt.beta0-par.beta0_target)**2  + (opt.beta1-par.beta1_target)**2
+                return opt.residual
+                
+            #Optimization using the basinhopping algorithm to find the global minimum
+            x0=[4.5,0.1] #Initial guess
+            bounds = ((0,5),(0,1)) #Bounds
+            solution = optimize.basinhopping(target,
+                                        x0,
+                                        niter = 25,
+                                        stepsize= 0.5,
+                                        minimizer_kwargs = {"method": "Nelder-Mead", "bounds": bounds},
+                                        seed = 2023)
+            opt.epsilonF = solution.x[0]
+            opt.sigma = solution.x[1]
         else:
             print('Mode not recognized. Available modes are: normal (default), extended and only_sigma')
