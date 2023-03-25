@@ -48,6 +48,7 @@ class HouseholdSpecializationModelClass:
 
         # g. extended model
         par.kappa = 1
+        par.seed = 2023
 
     def calc_utility(self,LM,HM,LF,HF):
         """ calculate utility """
@@ -138,9 +139,9 @@ class HouseholdSpecializationModelClass:
         if basin:
             solution = optimize.basinhopping(target_function,
                                                 x0,
-                                                minimizer_kwargs={'args': (par.wM,par.wF),'method':'Nelder-Mead','bounds':bounds},
                                                 niter=10, 
-                                                niter_success=3)
+                                                minimizer_kwargs={'args': (par.wM,par.wF),'method':'Nelder-Mead','bounds':bounds},
+                                                seed = par.seed)
         else:
             solution = optimize.minimize(target_function, 
                                          x0,
@@ -288,7 +289,7 @@ class HouseholdSpecializationModelClass:
                                         niter = 25,
                                         stepsize= 0.5,
                                         minimizer_kwargs = {"method": "Nelder-Mead", "bounds": bounds},
-                                        seed = 2023)
+                                        seed = par.seed)
             opt.epsilonF = solution.x[0]
             opt.sigma = solution.x[1]
         else:
