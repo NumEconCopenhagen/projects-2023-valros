@@ -48,7 +48,7 @@ class HouseholdSpecializationModelClass:
 
         # g. extended model
         par.kappa = 1
-        par.seed = 2023
+        par.seed = 1915
 
     def calc_utility(self,LM,HM,LF,HF):
         """ calculate utility """
@@ -220,7 +220,7 @@ class HouseholdSpecializationModelClass:
                 opt.residual = (opt.beta0-par.beta0_target)**2  + (opt.beta1-par.beta1_target)**2
                 return opt.residual
             
-            x0=[0.5,1] #Initial guess
+            x0=[0.5,0.1] #Initial guess
             bounds = ((0,1),(0,1)) #Bounds
 
             #Continous solution with the help of the scipy.optimize package
@@ -229,25 +229,6 @@ class HouseholdSpecializationModelClass:
                                         method='Nelder-Mead',
                                         bounds=bounds)
             opt.alpha = solution.x[0]
-            opt.sigma = solution.x[1]
-
-        # Extended mode where kappa is estimated as well as sigma
-        elif mode == 'extended':
-            
-            def target(x):
-                par.kappa, par.sigma = x
-                self.solve_wF_vec()
-                self.run_regression()
-                opt.residual = (opt.beta0-par.beta0_target)**2  + (opt.beta1-par.beta1_target)**2
-                return opt.residual
-            
-            x0=[1.0,0.1] #Initial guess
-            bounds = ((0,5),(0,1)) #Bounds
-            solution = optimize.minimize(target,
-                                        x0,
-                                        method='Nelder-Mead',
-                                        bounds=bounds)
-            opt.kappa = solution.x[0]
             opt.sigma = solution.x[1]
 
         # Only sigma mode, where only sigma is estimated
@@ -271,7 +252,7 @@ class HouseholdSpecializationModelClass:
             opt.sigma = solution.x
 
         # Extended mode where epsilon is estimated as well as sigma
-        elif mode == 'extended_epsilon':
+        elif mode == 'extended':
             
             #Target function for the basinhopping algorithm
             def target(x):
@@ -286,8 +267,7 @@ class HouseholdSpecializationModelClass:
             bounds = ((0,5),(0,1)) #Bounds
             solution = optimize.basinhopping(target,
                                         x0,
-                                        niter = 25,
-                                        stepsize= 0.5,
+                                        niter = 20,
                                         minimizer_kwargs = {"method": "Nelder-Mead", "bounds": bounds},
                                         seed = par.seed)
             opt.epsilonF = solution.x[0]
