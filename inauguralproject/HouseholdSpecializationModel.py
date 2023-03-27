@@ -60,22 +60,27 @@ class HouseholdSpecializationModelClass:
         C = par.wM*LM + par.wF*LF
 
         # b. home production
-        if par.sigma == 1:
-            H = HM**(1-par.alpha)*HF**par.alpha
-        elif par.sigma == 0:
-            H = np.minimum(HM,HF)
-        else:
-            H = ((1-par.alpha)*HM**((par.sigma-1)/par.sigma)+par.alpha*HF**((par.sigma-1)/par.sigma))**(par.sigma/(par.sigma-1))
+        with np.errstate(divide='ignore', invalid='ignore'):
+            if par.sigma == 1:
+                H = HM**(1-par.alpha)*HF**par.alpha
+            elif par.sigma == 0:
+                H = np.minimum(HM,HF)
+            else:
+                H = ((1-par.alpha)*HM**((par.sigma-1)/par.sigma)+par.alpha*HF**((par.sigma-1)/par.sigma))**(par.sigma/(par.sigma-1))
         
         # c. total consumption utility
         Q = C**par.omega*H**(1-par.omega)
-        utility = np.fmax(Q,1e-8)**(1-par.rho)/(1-par.rho)
+
+        with np.errstate(invalid='ignore'):
+            utility = np.fmax(Q,1e-8)**(1-par.rho)/(1-par.rho)
 
         # d. disutlity of work
+
         epsilon_M = 1+1/par.epsilonM
         epsilon_F = 1+1/par.epsilonF
         TM = LM+HM
         TF = LF+HF
+
         disutility = par.nu*(TM**epsilon_M/epsilon_M+par.kappa*(TF**epsilon_F)/epsilon_F)
         
         return utility - disutility
@@ -205,7 +210,7 @@ class HouseholdSpecializationModelClass:
         A = np.vstack([np.ones(x.size),x]).T
         opt.beta0,opt.beta1 = np.linalg.lstsq(A,y,rcond=None)[0]
     
-    def estimate(self,mode='normal'):
+    def estimate(self,mode='normal',do_print=False):
         """ estimate model """
         par = self.par
         opt = self.opt
@@ -231,6 +236,12 @@ class HouseholdSpecializationModelClass:
             opt.alpha = solution.x[0]
             opt.sigma = solution.x[1]
 
+            #Printing the results
+            if do_print:
+                print(f'\u03B1_opt = {opt.alpha:6.4f}') #\u03B1 is the unicode for the greek letter alpha
+                print(f'\u03C3_opt = {opt.sigma:6.4f}') #\u03C3 is the unicode for the greek letter sigma
+                print(f'Residual_opt = {opt.residual:6.4f}')
+
         # Only sigma mode, where only sigma is estimated
         elif mode == 'only_sigma':
 
@@ -241,7 +252,7 @@ class HouseholdSpecializationModelClass:
                 opt.residual = (opt.beta0-par.beta0_target)**2  + (opt.beta1-par.beta1_target)**2
                 return opt.residual
 
-            x0=[0.1] #Initial guess
+            x0=[0.2] #Initial guess
             bounds = ((0,1)) #Bounds
 
             #Continous solution with the help of the scipy.optimize package
@@ -250,6 +261,11 @@ class HouseholdSpecializationModelClass:
                                         method='Bounded',
                                         bounds=bounds)
             opt.sigma = solution.x
+
+            #Printing the results
+            if do_print:
+                print(f'\u03C3_base = {opt.sigma:6.4f}') #\u03C3 is the unicode for the greek letter sigma
+                print(f'Residual_base = {opt.residual:6.4f}')
 
         # Extended mode where epsilon is estimated as well as sigma
         elif mode == 'extended':
@@ -272,5 +288,12 @@ class HouseholdSpecializationModelClass:
                                         seed = par.seed)
             opt.epsilonF = solution.x[0]
             opt.sigma = solution.x[1]
+
+            #Printing the results
+            if do_print:
+                print(f'\u03B5_F_ext = {opt.epsilonF:6.4f}') #\u03B5 is the unicode for the greek letter epsilon
+                print(f'\u03C3_ext = {opt.sigma:6.4f}') #\u03C3 is the unicode for the greek letter sigma
+                print(f'Residual_ext = {opt.residual:6.4f}')
+
         else:
             print('Mode not recognized. Available modes are: normal (default), extended and only_sigma')
