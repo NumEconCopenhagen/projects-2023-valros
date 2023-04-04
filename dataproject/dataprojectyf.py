@@ -1,10 +1,14 @@
-import yfinance as yf
+# packages for data analysis
 import pandas as pd
 import numpy as np
-import requests
-#import json
-#import datetime
+from IPython.display import display
 import warnings
+
+# packages for data collection
+import requests
+import yfinance as yf
+
+
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 def yf_api(ticker, start, end):
@@ -13,7 +17,7 @@ def yf_api(ticker, start, end):
     df = yf.download(ticker, start=start, end=end, interval="1d")
     return df
 
-def fetch_data(mode="house"):
+def fetch_data(mode="house", print_head = False):
     """
     Fetches data from the House or Senate Stockwatcher API.
 
@@ -67,9 +71,14 @@ def fetch_data(mode="house"):
                      'party': party, 
                      'description': description})
     df = pd.DataFrame(data)
+
+    # e. print the head of the dataframe
+    if print_head:
+        display(df)
+
     return df
 
-def clean_data(df):
+def clean_data(df, print_head = False):
     """
     Cleans the data from the House or Senate Stockwatcher API.
 
@@ -118,7 +127,7 @@ def clean_data(df):
     # g. cleans representative column
     df.representative = df.representative.str.title() # capitalize first letter
     df.representative = df.representative.str.strip() # remove leading and trailing whitespace
-    df.representative = df.representative.astype('str') # convert to string
+    df.representative = df.representative.astype('category') # convert to string
 
     # h. cleans party column
     df.party = df.party.str.lower() # convert to lowercase
@@ -134,7 +143,27 @@ def clean_data(df):
     # j. rebase index
     df.reset_index(drop=True, inplace=True)
 
+    # k. print the head of the dataframe
+    if print_head:
+        display(df)
+
     return df
+
+def parse_no_stocks(df): # still working on this
+
+    pass
+
+    # a. copies the dataframe to avoid modifying the original
+    df = df.copy()
+
+    # b. creates a new column to hold the number of stocks
+    df['no_stocks'] = np.nan
+
+    # c. parses shares from description
+
+    # e. rebase index
+    df.reset_index(drop=True, inplace=True)
+
 
 
     
