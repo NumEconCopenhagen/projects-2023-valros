@@ -154,7 +154,7 @@ def clean_data(df, print_df = False):
 
     return df
 
-def parse_no_shares(df, pattern = r"([$]?\d+\.?\,?\d+[K]?)", print_df = False): # still working on this
+def parse_no_shares(df, pattern = r"([$]?\d+\.?\,?\d+[K]?)", print_df = False): # still work in progress
     """
     Parses out the numbers in the description column.
 
@@ -178,10 +178,10 @@ def parse_no_shares(df, pattern = r"([$]?\d+\.?\,?\d+[K]?)", print_df = False): 
     # d. rename columns to match pattern
     df_new.columns = [f'desc_match{i+1}' for i in range(len(df_new.columns))]
 
-    # Concatenate new dataframe with original dataframe
+    # e. oncatenate new dataframe with original dataframe
     df = pd.concat([df, df_new], axis=1)
 
-    # e. print the head of the dataframe
+    # f. print the head of the dataframe
     if print_df:
         display(df)
     
