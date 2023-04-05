@@ -1,8 +1,11 @@
 # packages for data analysis
 import pandas as pd
 import numpy as np
-from IPython.display import display
+import re
 import warnings
+
+# packages for data visualization
+from IPython.display import display
 
 # packages for data collection
 import requests
@@ -17,12 +20,13 @@ def yf_api(ticker, start, end):
     df = yf.download(ticker, start=start, end=end, interval="1d")
     return df
 
-def fetch_data(mode="house", print_head = False):
+def fetch_data(mode="house", print_df = False):
     """
     Fetches data from the House or Senate Stockwatcher API.
 
     arguments:
         mode: string, either "house" or "senate"
+        print_df: boolean, whether to print the dataframe
 
     returns:
         df: pandas dataframe, containing the data
@@ -73,17 +77,18 @@ def fetch_data(mode="house", print_head = False):
     df = pd.DataFrame(data)
 
     # e. print the head of the dataframe
-    if print_head:
+    if print_df:
         display(df)
 
     return df
 
-def clean_data(df, print_head = False):
+def clean_data(df, print_df = False):
     """
     Cleans the data from the House or Senate Stockwatcher API.
 
     arguments:
         df: pandas dataframe, containing the data
+        print_df: boolean, whether to print the dataframe
 
     returns:
         df: pandas dataframe, containing the cleaned data
@@ -144,26 +149,40 @@ def clean_data(df, print_head = False):
     df.reset_index(drop=True, inplace=True)
 
     # k. print the head of the dataframe
-    if print_head:
+    if print_df:
         display(df)
 
     return df
 
-def parse_no_stocks(df): # still working on this
+def parse_no_shares(df, pattern = r"([$]?\d+\.?\,?\d+[K]?)", print_df = False): # still working on this
+    """
+    Parses out the numbers in the description column.
 
-    pass
+    arguments:
+        df: pandas dataframe, containing the data
+        pattern: regular expression, the pattern to search for
+
+    returns:
+        df: pandas dataframe, containing the data with additional columns
+    """
 
     # a. copies the dataframe to avoid modifying the original
     df = df.copy()
 
-    # b. creates a new column to hold the number of stocks
-    df['no_stocks'] = np.nan
+    # b. apply regular expression to column
+    matches = df['description'].str.findall(pattern)
 
-    # c. parses shares from description
+    # c. create new dataframe with separate columns for each match
+    df_new = pd.DataFrame(matches.tolist(), index=df.index)
 
-    # e. rebase index
-    df.reset_index(drop=True, inplace=True)
+    # d. rename columns to match pattern
+    df_new.columns = [f'desc_match{i+1}' for i in range(len(df_new.columns))]
 
+    # Concatenate new dataframe with original dataframe
+    df = pd.concat([df, df_new], axis=1)
 
-
+    # e. print the head of the dataframe
+    if print_df:
+        display(df)
     
+    return df
