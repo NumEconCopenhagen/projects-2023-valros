@@ -123,6 +123,7 @@ def clean_data(df, print_df = False):
     print(df.ticker.count() - df.ticker.str.isalnum().sum(), "invalid tickers dropped") # print number of invalid tickers dropped
     df = df[df.ticker.str.isalnum()] # drop rows with invalid ticker
     df.ticker = df.ticker.astype('str') # convert to string
+    df.ticker.replace('FB', 'META', inplace=True) # replace FB with META (Facebook changed their ticker from FB to META in 2013)
 
     # f. cleans action column
     df.action = df.action.str.lower() # convert to lowercase
@@ -178,7 +179,7 @@ def parse_no_shares(df, pattern = r"([$]?\d+\.?\,?\d+[K]?)", print_df = False): 
     # d. rename columns to match pattern
     df_new.columns = [f'desc_match{i+1}' for i in range(len(df_new.columns))]
 
-    # e. oncatenate new dataframe with original dataframe
+    # e. concatenate new dataframe with original dataframe
     df = pd.concat([df, df_new], axis=1)
 
     # f. print the head of the dataframe
@@ -219,11 +220,29 @@ def select_rep(df, rep, print_df = False):
     # a. copies the dataframe to avoid modifying the original
     df = df.copy()
 
+
+    check = df.representative.str.contains(rep, case=False).sum()
+
     # b. select representative
     df = df[df.representative == rep]
 
-    # c. print the dataframe
+    # c. rebase index
+    df.reset_index(drop=True, inplace=True)
+
+    # d. print the dataframe
     if print_df:
         display(df)
 
     return df
+def get_stock_data(df):
+
+    # a. find unique tickers, and max and min dates
+    tickers = " ".join(df.ticker.unique())
+    min_date = df.date.min()
+    max_date = df.date.max()
+
+    stock_df = yf.download(tickers, start=min_date, end=max_date, interval="1d")
+
+    return stock_df
+
+
