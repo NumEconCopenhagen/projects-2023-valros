@@ -62,14 +62,9 @@ def fetch_data(mode="house", print_df = False):
         ticker = transaction['ticker']
         amount = transaction['amount']
         action = transaction['type']
+        representative = transaction['representative']
         description = transaction['asset_description']
-        party = transaction.get('party', '')
-        
-        if mode == "house":
-            representative = transaction['representative']
-        elif mode == "senate":
-            representative = transaction['senator']
-        
+        party = transaction['party']
 
         # ii. append cleaned data to the list
         data.append({'date': date, 
@@ -112,7 +107,6 @@ def clean_data(df, print_df = False):
         df[x] = df[x].str.replace('$', '')
         df[x] = df[x].str.replace(',', '')
         df[x] = df[x].str.replace('+', '')
-        df[x] = df[x].str.replace('Unknown', '')
         df[x].replace('', np.nan, inplace=True)
         df[x] = df[x].astype('float')
     
@@ -124,11 +118,12 @@ def clean_data(df, print_df = False):
 
     # e. cleans ticker 
     df.ticker = df.ticker.str.upper() # convert to uppercase
-    df.ticker = df.ticker.str.strip() # remove leading and trailing white
+    df.ticker = df.ticker.str.strip() # remove leading and trailing whitespace
     
     print(df.ticker.count() - df.ticker.str.isalnum().sum(), "invalid tickers dropped") # print number of invalid tickers dropped
     df = df[df.ticker.str.isalnum()] # drop rows with invalid ticker
     df.ticker = df.ticker.astype('str') # convert to string
+    df.ticker.replace('FB', 'META', inplace=True) # replace FB with META (Facebook changed their ticker from FB to META in 2022)
 
     # f. cleans action column
     df.action = df.action.str.lower() # convert to lowercase
@@ -184,7 +179,7 @@ def parse_no_shares(df, pattern = r"([$]?\d+\.?\,?\d+[K]?)", print_df = False): 
     # d. rename columns to match pattern
     df_new.columns = [f'desc_match{i+1}' for i in range(len(df_new.columns))]
 
-    # e. oncatenate new dataframe with original dataframe
+    # e. concatenate new dataframe with original dataframe
     df = pd.concat([df, df_new], axis=1)
 
     # f. print the head of the dataframe
@@ -225,13 +220,48 @@ def select_rep(df, rep, print_df = False):
     # a. copies the dataframe to avoid modifying the original
     df = df.copy()
 
+
+    check = df.representative.str.contains(rep, case=False).sum()
+
     # b. select representative
     df = df[df.representative == rep]
 
-    # c. print the dataframe
+    # c. rebase index
+    df.reset_index(drop=True, inplace=True)
+
+    # d. print the dataframe
     if print_df:
         display(df)
 
     return df
+
+def get_stock_data(df):
+
+    # a. find unique tickers, and max and min dates
+    tickers = df.ticker.unique()
+
+    # b. find min and max dates for each ticker
+    min_dates = []
+    max_dates = []
+    for ticker in tickers:
+        min_dates.append(df[df.ticker == ticker].date.min())
+        max_dates.append(df[df.ticker == ticker].date.max())
+    
+    # c. change max date to today if action is not sell_full
+    for i in range(len(max_dates)):
+        if df[df.ticker == tickers[i]].action.str.contains('sell_full', case=False).sum() == 0:
+            max_dates[i] = pd.to_datetime('today')
+
+    # d. download stock data
+    for i in range(len(tickers)):
+        stock_df = yf.download(tickers[i], start=min_dates[i], end=max_dates[i], progress=False)
+        stock_df['ticker'] = tickers[i]
+        stock_df['date'] = stock_df.index
+        stock_df.to_csv(f'{tickers[i]}.csv', index=False)
+    
+
+    return stock_df
+
+
 
 
