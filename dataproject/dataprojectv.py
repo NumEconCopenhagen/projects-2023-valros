@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import re
 import warnings
+import matplotlib.pyplot as plt
 
 # packages for data visualization
 from IPython.display import display
@@ -62,9 +63,12 @@ def fetch_data(mode="house", print_df = False):
         ticker = transaction['ticker']
         amount = transaction['amount']
         action = transaction['type']
-        representative = transaction['representative']
+        if mode == "house":
+            representative = transaction['representative']
+        elif mode == "senate":
+            representative = transaction['senator']
         description = transaction['asset_description']
-        party = transaction['party']
+        party = transaction['party'] if 'party' in transaction else None
 
         # ii. append cleaned data to the list
         data.append({'date': date, 
@@ -107,6 +111,7 @@ def clean_data(df, print_df = False):
         df[x] = df[x].str.replace('$', '')
         df[x] = df[x].str.replace(',', '')
         df[x] = df[x].str.replace('+', '')
+        df[x] = df[x].str.replace('Unknown', '')
         df[x].replace('', np.nan, inplace=True)
         df[x] = df[x].astype('float')
     
@@ -236,7 +241,6 @@ def select_rep(df, rep, print_df = False):
     return df
 
 def get_stock_data(df):
-
     # a. find unique tickers, and max and min dates
     tickers = df.ticker.unique()
 
@@ -246,22 +250,72 @@ def get_stock_data(df):
     for ticker in tickers:
         min_dates.append(df[df.ticker == ticker].date.min())
         max_dates.append(df[df.ticker == ticker].date.max())
-    
+
     # c. change max date to today if action is not sell_full
     for i in range(len(max_dates)):
         if df[df.ticker == tickers[i]].action.str.contains('sell_full', case=False).sum() == 0:
             max_dates[i] = pd.to_datetime('today')
 
-    # d. download stock data
+    # d. download stock data and store in a list of DataFrames
+    stock_dataframes = []
     for i in range(len(tickers)):
         stock_df = yf.download(tickers[i], start=min_dates[i], end=max_dates[i], progress=False)
-        stock_df['ticker'] = tickers[i]
-        stock_df['date'] = stock_df.index
-        stock_df.to_csv(f'{tickers[i]}.csv', index=False)
-    
+        if not stock_df.empty:
+            stock_df['ticker'] = tickers[i]
+            stock_df['date'] = stock_df.index
+            stock_dataframes.append(stock_df)
 
-    return stock_df
+    # e. concatenate the list of DataFrames if not empty
+    if stock_dataframes:
+        stock_df_combined = pd.concat(stock_dataframes, axis=0, ignore_index=True)
+    else:
+        raise ValueError("No stock data downloaded.")
 
+    return stock_df_combined
+
+
+def calculate_portfolio_value(df, stock_df):
+    """
+    Calculates the total portfolio value for the senator.
+
+    arguments:
+        df: pandas dataframe, containing the data
+        stock_df: pandas dataframe, containing stock data
+
+    returns:
+        df: pandas dataframe, containing the data with portfolio value column
+    """
+    # a. Merge transaction and stock dataframes
+    df_merged = df.merge(stock_df, how='left', on=['ticker', 'date'])
+
+    # b. Calculate the value for each transaction
+    df_merged['value'] = df_merged['avg_amount'] * df_merged['Close']
+
+    # c. Calculate the cumulative value for each ticker
+    df_merged['cumulative_value'] = df_merged.groupby(['ticker', 'action'])['value'].cumsum()
+
+    return df_merged
+
+def plot_weighted_cumulative_portfolio_return(df):
+    """
+    Plots the weighted cumulative portfolio return for the given senator.
+
+    arguments:
+        df: pandas dataframe, containing the data
+    """
+    # a. Calculate the weighted portfolio return for each ticker
+    df['weighted_return'] = df['cumulative_value'].pct_change()
+
+    # b. Calculate the cumulative weighted return
+    df['cumulative_weighted_return'] = (1 + df['weighted_return']).cumprod() - 1
+
+    # c. Plot the cumulative weighted return
+    plt.figure(figsize=(10, 6))
+    plt.plot(df['date'], df['cumulative_weighted_return'])
+    plt.xlabel('Date')
+    plt.ylabel('Cumulative Weighted Return')
+    plt.title('Weighted Cumulative Portfolio Return for Senator')
+    plt.show()
 
 
 
