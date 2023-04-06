@@ -186,3 +186,44 @@ def parse_no_shares(df, pattern = r"([$]?\d+\.?\,?\d+[K]?)", print_df = False): 
         display(df)
     
     return df
+
+def average_amount(df):
+    """
+    Calculates the average amount of money spent on a stock.
+
+    arguments:
+        df: pandas dataframe, containing the data
+
+    returns:
+        df: pandas dataframe, containing the data with additional columns
+    """
+    # a. copies the dataframe to avoid modifying the original
+    df = df.copy()
+
+    # b. calculate average amount
+    df['avg_amount'] = df[['min_amount', 'max_amount']].mean(axis=1)
+
+    return df
+
+def select_rep(df, rep, print_df = False):
+    """
+    Selects a representative from the dataframe.
+
+    arguments:
+        df: pandas dataframe, containing the data
+        rep: string, the name of the representative
+
+    returns:
+        df: pandas dataframe, containing the data for the selected representative
+    """
+    # a. copies the dataframe to avoid modifying the original
+    df = df.copy()
+
+    # b. select representative
+    df = df[df.representative == rep]
+
+    # c. print the dataframe
+    if print_df:
+        display(df)
+
+    return df
