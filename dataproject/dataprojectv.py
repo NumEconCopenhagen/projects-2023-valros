@@ -62,9 +62,14 @@ def fetch_data(mode="house", print_df = False):
         ticker = transaction['ticker']
         amount = transaction['amount']
         action = transaction['type']
-        representative = transaction['representative']
         description = transaction['asset_description']
-        party = transaction['party']
+        party = transaction.get('party', '')
+        
+        if mode == "house":
+            representative = transaction['representative']
+        elif mode == "senate":
+            representative = transaction['senator']
+        
 
         # ii. append cleaned data to the list
         data.append({'date': date, 
@@ -107,6 +112,7 @@ def clean_data(df, print_df = False):
         df[x] = df[x].str.replace('$', '')
         df[x] = df[x].str.replace(',', '')
         df[x] = df[x].str.replace('+', '')
+        df[x] = df[x].str.replace('Unknown', '')
         df[x].replace('', np.nan, inplace=True)
         df[x] = df[x].astype('float')
     
@@ -118,7 +124,8 @@ def clean_data(df, print_df = False):
 
     # e. cleans ticker 
     df.ticker = df.ticker.str.upper() # convert to uppercase
-    df.ticker = df.ticker.str.strip() # remove leading and trailing whitespace
+    df.ticker = df.ticker.str.strip() # remove leading and trailing white
+    space
     
     print(df.ticker.count() - df.ticker.str.isalnum().sum(), "invalid tickers dropped") # print number of invalid tickers dropped
     df = df[df.ticker.str.isalnum()] # drop rows with invalid ticker
@@ -227,3 +234,5 @@ def select_rep(df, rep, print_df = False):
         display(df)
 
     return df
+
+
