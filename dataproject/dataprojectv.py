@@ -125,7 +125,6 @@ def clean_data(df, print_df = False):
     # e. cleans ticker 
     df.ticker = df.ticker.str.upper() # convert to uppercase
     df.ticker = df.ticker.str.strip() # remove leading and trailing white
-    space
     
     print(df.ticker.count() - df.ticker.str.isalnum().sum(), "invalid tickers dropped") # print number of invalid tickers dropped
     df = df[df.ticker.str.isalnum()] # drop rows with invalid ticker
