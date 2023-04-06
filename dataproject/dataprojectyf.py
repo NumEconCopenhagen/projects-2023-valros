@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import re
 import warnings
+import matplotlib.pyplot as plt
 
 # packages for data visualization
 from IPython.display import display
@@ -122,13 +123,13 @@ def clean_data(df, print_df = False):
     
     print(df.ticker.count() - df.ticker.str.isalnum().sum(), "invalid tickers dropped") # print number of invalid tickers dropped
     df = df[df.ticker.str.isalnum()] # drop rows with invalid ticker
-    df.ticker = df.ticker.astype('str') # convert to string
+    df.ticker = df.ticker.astype('string') # convert to string
     df.ticker.replace('FB', 'META', inplace=True) # replace FB with META (Facebook changed their ticker from FB to META in 2022)
 
     # f. cleans action column
     df.action = df.action.str.lower() # convert to lowercase
     df.action = df.action.str.strip() # remove leading and trailing whitespace
-    df.action = df.action.astype('str') # convert to string
+    df.action = df.action.astype('string') # convert to string
 
     # g. cleans representative column
     df.representative = df.representative.str.title() # capitalize first letter
@@ -139,14 +140,15 @@ def clean_data(df, print_df = False):
     df.party = df.party.str.lower() # convert to lowercase
     df.party = df.party.str.strip() # remove leading and trailing whitespace
     df.party = df.party.str[:3] # keep only the three letters
-    df.party = df.party.astype('str') # convert to string
+    df.party = df.party.astype('string') # convert to string
 
     # i. cleans description column by removing options trading
-    df.description = df.description.astype('str') # convert to string
+    df.description = df.description.astype('string') # convert to string
     print(df.description.str.contains('options', case=False).sum(), "options trades dropped") # print number of options trades dropped
     df.drop(df[df.description.str.contains('options', case=False)].index, inplace=True) # drop rows with options trading
 
     # j. rebase index
+    df.sort_values(by=['representative','ticker', 'date'], inplace=True)
     df.reset_index(drop=True, inplace=True)
 
     # k. print the head of the dataframe
@@ -202,7 +204,7 @@ def average_amount(df):
     df = df.copy()
 
     # b. calculate average amount
-    df['avg_amount'] = df[['min_amount', 'max_amount']].mean(axis=1)
+    df['amount'] = df[['min_amount', 'max_amount']].mean(axis=1)
 
     return df
 
@@ -227,6 +229,7 @@ def select_rep(df, rep, print_df = False):
     df = df[df.representative == rep]
 
     # c. rebase index
+    df.sort_values(by=['ticker', 'date'], inplace=True)
     df.reset_index(drop=True, inplace=True)
 
     # d. print the dataframe
@@ -234,31 +237,180 @@ def select_rep(df, rep, print_df = False):
         display(df)
 
     return df
-def get_stock_data(df):
+def get_stock_data(df, print_df = False):
 
-    # a. find unique tickers, and max and min dates
-    tickers = df.ticker.unique()
+    # a. find unique tickers, and min date
+    tickers = " ".join(df.ticker.unique())
+    min_date = df.date.min()
+    max_date = pd.to_datetime('today')
 
-    # b. find min and max dates for each ticker
-    min_dates = []
-    max_dates = []
-    for ticker in tickers:
-        min_dates.append(df[df.ticker == ticker].date.min())
-        max_dates.append(df[df.ticker == ticker].date.max())
-    
-    # c. change max date to today if action is not sell_full
-    for i in range(len(max_dates)):
-        if df[df.ticker == tickers[i]].action.str.contains('sell_full', case=False).sum() == 0:
-            max_dates[i] = pd.to_datetime('today')
+    # b. download stock data
+    stock_df = yf.download(tickers, start=min_date, end=max_date, progress=True)
 
-    # d. download stock data
-    for i in range(len(tickers)):
-        stock_df = yf.download(tickers[i], start=min_dates[i], end=max_dates[i], progress=False)
-        stock_df['ticker'] = tickers[i]
-        stock_df['date'] = stock_df.index
-        stock_df.to_csv(f'{tickers[i]}.csv', index=False)
-    
+    # c. keep only adjusted close
+    stock_df = stock_df['Adj Close']
+
+    # d. print the dataframe
+    if print_df:
+        display(stock_df)
 
     return stock_df
 
+def merge_data(df,stock, print_df = False):
+    """
+    Merge the stock data with the representative data.
 
+    arguments:
+        df: pandas dataframe, containing the represnetative data
+        stock: pandas dataframe, containing the stock data
+
+    returns:
+        df: pandas dataframe, containing the merged data
+    
+    """
+
+
+    # a. copies the dataframe to avoid modifying the original
+    df = df.copy()
+    stock = stock.copy()
+
+    # b. merge dataframes
+    df = pd.merge(stock.stack().reset_index(), df, left_on=['Date', 'level_1'], right_on=['date', 'ticker'], how='left')
+    df.drop(columns=['date', 'ticker', 'representative', 'party', 'description', 'min_amount', 'max_amount'], inplace=True)
+    df.rename(columns={'Date':'date','level_1': 'ticker', 0: 'price'}, inplace=True)
+    df.ticker = df.ticker.astype('string')
+
+
+    # d. setting <NA> values to 0 in the action column
+    df.action.fillna('none', inplace=True)
+
+    # drop ticker if there is no purchase data
+    df = df[df.ticker.isin(df[df.action == 'purchase'].ticker.unique())]
+
+    # find first purchase date for each ticker
+    first_purchase = df[df.action == 'purchase'].groupby('ticker').date.min().reset_index()
+
+
+    # drop all rows before the first purchase date
+    df = pd.merge(df, first_purchase, on='ticker', how='left')
+    df = df[df.date_x >= df.date_y]
+    df.drop(columns=['date_y'], inplace=True)
+    df.rename(columns={'date_x':'date'}, inplace=True)
+
+    df.sort_values(by=['ticker', 'date'], inplace=True)
+    df.reset_index(drop=True, inplace=True)
+    # c. print the dataframe
+    if print_df:
+        display(df)
+    
+    return df
+
+def portfolio(df, print_df = False):
+    """
+    Calculates the number of shares in the portfolio.
+
+    arguments
+        df: pandas dataframe, containing the data
+
+    returns:
+        df: pandas dataframe, containing the data with additional columns
+    """
+
+    # a. copies the dataframe to avoid modifying the original
+    df = df.copy()
+
+    # b. creating new columns populated with 0 and empty dataframe to store results
+    df['share_change'] = 0
+    df['shares_owned'] = 0
+    results_df = pd.DataFrame()
+
+
+    # running a loop for each ticker
+    tickers = df.ticker.unique()
+    for ticker in tickers:
+        ticker_df = df[df['ticker'] == ticker].reset_index()
+        for i in range(len(ticker_df)):
+            if i == 0:
+                ticker_df.loc[i, 'share_change'] = ticker_df.loc[i, 'amount'] // ticker_df.loc[i, 'price']
+                ticker_df.loc[i, 'shares_owned'] = ticker_df.loc[i, 'share_change']
+            else:
+                if ticker_df.loc[i, 'action'] == 'purchase':
+                    ticker_df.loc[i, 'share_change'] = ticker_df.loc[i, 'amount'] // df.loc[i, 'price']
+                elif ticker_df.loc[i, 'action'] == 'sale_partial':
+                    ticker_df.loc[i, 'share_change'] = - (ticker_df.loc[i-1, 'shares_owned'] // 2)
+                elif ticker_df.loc[i, 'action'] == 'sale_full':
+                    ticker_df.loc[i, 'share_change'] = - ticker_df.loc[i-1, 'shares_owned']
+                ticker_df.loc[i, 'shares_owned'] = ticker_df.loc[i-1, 'shares_owned'] + ticker_df.loc[i, 'share_change'] # should give 0
+        results_df = results_df.append(ticker_df)
+        
+    results_df = results_df.reset_index(drop=True)
+    results_df = results_df.drop(columns=['index'])
+
+    # d. return of the shares
+    results_df['daily_return'] = results_df.groupby('ticker')['price'].pct_change()
+
+    # e. calculating portfolio weight for each ticker by value of the shares owned for each day
+    results_df['value_ticker'] = results_df['price'] * results_df['shares_owned']
+
+    # f. calculating portfolio value for each day
+    results_df['value_portfolio'] = results_df.groupby('date')['value_ticker'].transform('sum')
+
+    # g. calculating portfolio weight for each ticker by value of the shares owned for each day
+    results_df['weight_ticker'] = results_df['value_ticker'] / results_df['value_portfolio']
+
+    # h. calculating portfolio return for each day
+    results_df['weighted_return'] = results_df['daily_return'] * results_df['weight_ticker']
+
+    # i. calculating portfolio return for each day
+    results_df['portfolio_return'] = results_df.groupby('date')['weighted_return'].transform('sum')
+
+    return results_df
+
+def daily_data(df):
+    """
+    Takes data frame and groups it by date to only show daily returns for entire portfolio
+    """
+    df = df.copy()
+    df = df.groupby('date').agg({'portfolio_return': 'sum'})
+    df = df.reset_index()
+    return df
+
+
+def plot_portfolio(df):
+    
+    # finding min and max date for each ticker
+    min_date = df.groupby('ticker')['date'].min()
+    max_date = df.groupby('ticker')['date'].max()
+
+    # creating a list of tickers
+    tickers = df.ticker.unique()
+
+
+    fig, ax = plt.subplots(figsize=(15, 7))
+
+    # creating a plot for each ticker
+    for ticker in tickers:
+        # plotting the portfolio value
+        ax.plot(df.loc[df['ticker'] == ticker, 'date'], df.loc[df['ticker'] == ticker, 'value_ticker'], label=ticker, linewidth=1)
+    
+    # plotting the portfolio value
+    # setting the title
+    ax.set_title(f'Portfolio Value for ...')
+
+    # setting the x-axis label
+    ax.set_xlabel('Date')
+
+    # setting the y-axis label
+    ax.set_ylabel('Value')
+
+    # setting the x-axis limits
+    ax.set_xlim(df.date.min(), df.date.max())
+
+    # setting the y-axis limits
+    ax.set_ylim(df.value.min(), df.value.max())
+
+    # adding a legend
+    ax.legend()
+
+    ax.plot(df.loc[df['ticker'] == ticker, 'date'], df.loc[df['ticker'] == ticker, 'value'], label='Total Value', color='black', linewidth=2)
+    plt.show()
