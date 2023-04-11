@@ -143,62 +143,15 @@ def clean_data(df, print_df = False):
     df.sort_values(by=['representative','ticker', 'date'], inplace=True)
     df.reset_index(drop=True, inplace=True)
 
-    # k. print the head of the dataframe
-    if print_df:
-        display(df)
-
-    return df
-
-def parse_no_shares(df, pattern = r"([$]?\d+\.?\,?\d+[K]?)", print_df = False): # still work in progress
-    """
-    Parses out the numbers in the description column.
-
-    arguments:
-        df: pandas dataframe, containing the data
-        pattern: regular expression, the pattern to search for
-
-    returns:
-        df: pandas dataframe, containing the data with additional columns
-    """
-
-    # a. copies the dataframe to avoid modifying the original
-    df = df.copy()
-
-    # b. apply regular expression to column
-    matches = df['description'].str.findall(pattern)
-
-    # c. create new dataframe with separate columns for each match
-    df_new = pd.DataFrame(matches.tolist(), index=df.index)
-
-    # d. rename columns to match pattern
-    df_new.columns = [f'desc_match{i+1}' for i in range(len(df_new.columns))]
-
-    # e. concatenate new dataframe with original dataframe
-    df = pd.concat([df, df_new], axis=1)
-
-    # f. print the head of the dataframe
-    if print_df:
-        display(df)
-    
-    return df
-
-def average_amount(df):
-    """
-    Calculates the average amount of money spent on a stock.
-
-    arguments:
-        df: pandas dataframe, containing the data
-
-    returns:
-        df: pandas dataframe, containing the data with additional columns
-    """
-    # a. copies the dataframe to avoid modifying the original
-    df = df.copy()
-
-    # b. calculate average amount
+    # k. calculate average amount
     df['amount'] = df[['min_amount', 'max_amount']].mean(axis=1)
 
+    # l. print the head of the dataframe
+    if print_df:
+        display(df)
+
     return df
+
 
 def select_rep(df, rep, print_df = False):
     """
