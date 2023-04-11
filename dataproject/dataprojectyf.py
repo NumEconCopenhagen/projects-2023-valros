@@ -266,7 +266,7 @@ def portfolio(df, print_df = False):
     results_df = pd.DataFrame()
 
 
-    # running a loop for each ticker
+    # c. running a loop for each ticker
     tickers = df.ticker.unique()
     for ticker in tickers:
         ticker_df = df[df['ticker'] == ticker].reset_index()
@@ -301,7 +301,6 @@ def portfolio(df, print_df = False):
 
     # h. calculating portfolio return for each day
     results_df['weighted_return'] = results_df['daily_return'] * results_df['weight_ticker']
-
 
     # j. print the dataframe
     if print_df:
