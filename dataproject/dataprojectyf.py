@@ -384,5 +384,3 @@ def widget(df,name):
     # g. plot the return
     plot_return(portfolio_return, include_sp500 = True, title = name)
 
-
-
