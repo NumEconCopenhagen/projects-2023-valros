@@ -2,12 +2,11 @@
 import pandas as pd
 import numpy as np
 import warnings
-import matplotlib.pyplot as plt
-import matplotlib.ticker as mtick
-
 
 # packages for data visualization
 from IPython.display import display
+import matplotlib.pyplot as plt
+import matplotlib.ticker as mtick
 
 # packages for data collection
 import requests
@@ -308,7 +307,7 @@ def portfolio(df, print_df = False):
 
     return results_df
 
-def daily_return(df):
+def daily_return(df, print_df = False):
     """
     Takes data frame and groups it by date to only show daily returns for entire portfolio
     """
@@ -317,10 +316,14 @@ def daily_return(df):
 
     # set date as index
     df.set_index('date', inplace=True)
+
+    # print the dataframe
+    if print_df:
+        display(df)
     return df
 
 
-def plot_return(df, include_sp500 = False):
+def plot_return(df, include_sp500 = False, title = 'Nancy Pelosi'):
     """
     Plots the cummulitive return of the portfolio
     """
@@ -330,7 +333,7 @@ def plot_return(df, include_sp500 = False):
     df['cum_return'].plot()
 
     # a. set the title
-    plt.title('Cumulative Return of Portfolio')
+    plt.title('Cumulative Return of ' + title + "'s Portfolio")
 
     # b. set the x-axis label
     plt.xlabel('Date')
@@ -347,3 +350,39 @@ def plot_return(df, include_sp500 = False):
         sp500['cum_return'].plot()
 
     plt.show()
+
+def widget(df,name):
+    """
+    Calls all the functions to get a plot of the portfolio return and the S&P 500
+
+    arguments
+        df: pandas dataframe, cleaned house dataset
+        name: string, name of the representative
+
+    returns:
+        plot of the portfolio return and the S&P 500
+    """
+
+    # a. copies the dataframe to avoid modifying the original
+    df = df.copy()
+
+    # b. select the representative
+    df = select_rep(df, name)
+
+    # c. get stock data
+    stock = get_stock_data(df)
+
+    # d. merge the dataframes
+    merge = merge_data(df,stock)
+
+    # e. calculate portfolio and weighted return
+    portfolio_data = portfolio(merge)
+
+    # f. calculate daily return on entire portfolio
+    portfolio_return = daily_return(portfolio_data)
+
+    # g. plot the return
+    plot_return(portfolio_return, include_sp500 = True, title = name)
+
+
+
