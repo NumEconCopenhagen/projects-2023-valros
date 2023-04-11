@@ -1,9 +1,10 @@
 # packages for data analysis
 import pandas as pd
 import numpy as np
-import re
 import warnings
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mtick
+
 
 # packages for data visualization
 from IPython.display import display
@@ -21,7 +22,7 @@ def yf_api(ticker, start, end):
     df = yf.download(ticker, start=start, end=end, interval="1d")
     return df
 
-def fetch_data(mode="house", print_df = False):
+def fetch_data(print_df = False):
     """
     Fetches data from the House or Senate Stockwatcher API.
 
@@ -33,31 +34,22 @@ def fetch_data(mode="house", print_df = False):
         df: pandas dataframe, containing the data
     """
     
-    # a. set the url based on the mode
-    if mode == "house":
-        url = "https://house-stock-watcher-data.s3-us-west-2.amazonaws.com/data/all_transactions.json"
-    elif mode == "senate":
-        url = "https://senate-stock-watcher-data.s3-us-west-2.amazonaws.com/aggregate/all_transactions.json"
-    else:
-        print("invalid mode")
-        return False
-    
-    # b. make the request
-    response = requests.get(url)
+    # a. make the request
+    response = requests.get("https://house-stock-watcher-data.s3-us-west-2.amazonaws.com/data/all_transactions.json")
 
-    # c. check the response
+    # b. check the response
     if response.status_code != 200:
         print("request failed")
         return False
     else:
         print("request successful")
 
-    # d. parse the response
+    # c. parse the response
     data_json = response.json()
     data = [] # create an empty list to hold cleaned data
 
-
-    for transaction in data_json: # loop through each transaction in the original data
+    # d. loop through each transaction in the original data
+    for transaction in data_json: 
         # i. extract relevant fields
         date = transaction['transaction_date']
         ticker = transaction['ticker']
@@ -268,8 +260,6 @@ def merge_data(df,stock, print_df = False):
         df: pandas dataframe, containing the merged data
     
     """
-
-
     # a. copies the dataframe to avoid modifying the original
     df = df.copy()
     stock = stock.copy()
@@ -280,7 +270,6 @@ def merge_data(df,stock, print_df = False):
     df.rename(columns={'Date':'date','level_1': 'ticker', 0: 'price'}, inplace=True)
     df.ticker = df.ticker.astype('string')
 
-
     # d. setting <NA> values to 0 in the action column
     df.action.fillna('none', inplace=True)
 
@@ -289,7 +278,6 @@ def merge_data(df,stock, print_df = False):
 
     # find first purchase date for each ticker
     first_purchase = df[df.action == 'purchase'].groupby('ticker').date.min().reset_index()
-
 
     # drop all rows before the first purchase date
     df = pd.merge(df, first_purchase, on='ticker', how='left')
@@ -361,56 +349,49 @@ def portfolio(df, print_df = False):
     # h. calculating portfolio return for each day
     results_df['weighted_return'] = results_df['daily_return'] * results_df['weight_ticker']
 
-    # i. calculating portfolio return for each day
-    results_df['portfolio_return'] = results_df.groupby('date')['weighted_return'].transform('sum')
+
+    # j. print the dataframe
+    if print_df:
+        display(results_df)
 
     return results_df
 
-def daily_data(df):
+def daily_return(df):
     """
     Takes data frame and groups it by date to only show daily returns for entire portfolio
     """
     df = df.copy()
-    df = df.groupby('date').agg({'portfolio_return': 'sum'})
-    df = df.reset_index()
+    df = df.groupby('date').agg({'weighted_return': 'sum'}).reset_index()
+
+    # set date as index
+    df.set_index('date', inplace=True)
     return df
 
 
-def plot_portfolio(df):
-    
-    # finding min and max date for each ticker
-    min_date = df.groupby('ticker')['date'].min()
-    max_date = df.groupby('ticker')['date'].max()
+def plot_return(df, include_sp500 = False):
+    """
+    Plots the cummulitive return of the portfolio
+    """
+    df = df.copy()
 
-    # creating a list of tickers
-    tickers = df.ticker.unique()
+    df['cum_return'] = (1 + df['weighted_return']).cumprod()-1
+    df['cum_return'].plot()
 
+    # a. set the title
+    plt.title('Cumulative Return of Portfolio')
 
-    fig, ax = plt.subplots(figsize=(15, 7))
+    # b. set the x-axis label
+    plt.xlabel('Date')
 
-    # creating a plot for each ticker
-    for ticker in tickers:
-        # plotting the portfolio value
-        ax.plot(df.loc[df['ticker'] == ticker, 'date'], df.loc[df['ticker'] == ticker, 'value_ticker'], label=ticker, linewidth=1)
-    
-    # plotting the portfolio value
-    # setting the title
-    ax.set_title(f'Portfolio Value for ...')
+    # c. change y-axis to percentage
+    plt.gca().yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
 
-    # setting the x-axis label
-    ax.set_xlabel('Date')
+    # d. include S&P 500
+    if include_sp500:
+        min_date = df.index.min()
+        max_date = df.index.max()
+        sp500 = yf.download('^GSPC', start=min_date, end=max_date)
+        sp500['cum_return'] = (1 + sp500['Adj Close'].pct_change()).cumprod()-1
+        sp500['cum_return'].plot()
 
-    # setting the y-axis label
-    ax.set_ylabel('Value')
-
-    # setting the x-axis limits
-    ax.set_xlim(df.date.min(), df.date.max())
-
-    # setting the y-axis limits
-    ax.set_ylim(df.value.min(), df.value.max())
-
-    # adding a legend
-    ax.legend()
-
-    ax.plot(df.loc[df['ticker'] == ticker, 'date'], df.loc[df['ticker'] == ticker, 'value'], label='Total Value', color='black', linewidth=2)
     plt.show()
