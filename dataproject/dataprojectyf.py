@@ -1,32 +1,26 @@
-# packages for data analysis
+# a. packages for data analysis
 import pandas as pd
 import numpy as np
 import warnings
 
-# packages for data visualization
+# b. packages for data visualization
 from IPython.display import display
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 
-# packages for data collection
+# c. packages for data collection
 import requests
 import yfinance as yf
 
 
+# d. remove all FutureWarning, which are not relevant for this project
 warnings.simplefilter(action='ignore', category=FutureWarning)
-
-def yf_api(ticker, start, end):
-
-
-    df = yf.download(ticker, start=start, end=end, interval="1d")
-    return df
 
 def fetch_data(print_df = False):
     """
-    Fetches data from the House or Senate Stockwatcher API.
+    Fetches data from the House Stockwatcher API.
 
     arguments:
-        mode: string, either "house" or "senate"
         print_df: boolean, whether to print the dataframe
 
     returns:
@@ -189,6 +183,7 @@ def get_stock_data(df, print_df = False):
     max_date = pd.to_datetime('today')
 
     # b. download stock data
+    print("Downloading stock data...")
     stock_df = yf.download(tickers, start=min_date, end=max_date, progress=True)
 
     # c. keep only adjusted close
@@ -345,6 +340,7 @@ def plot_return(df, include_sp500 = False, title = 'Nancy Pelosi'):
     if include_sp500:
         min_date = df.index.min()
         max_date = df.index.max()
+        print("Downloading S&P 500 data...")
         sp500 = yf.download('^GSPC', start=min_date, end=max_date)
         sp500['cum_return'] = (1 + sp500['Adj Close'].pct_change()).cumprod()-1
         sp500['cum_return'].plot()
