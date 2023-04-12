@@ -70,7 +70,7 @@ def fetch_data(print_df = False):
 
 def clean_data(df, print_df = False):
     """
-    Cleans the data from the House or Senate Stockwatcher API.
+    Cleans the data from the House Stockwatcher API.
 
     arguments:
         df: pandas dataframe, containing the data
@@ -86,10 +86,12 @@ def clean_data(df, print_df = False):
     df.replace('', np.nan, inplace=True)
 
     # c. cleans amount column
-    df[['min_amount', 'max_amount']] = df['amount'].str.split('-', expand=True) # i. splits amount into two columns: min_amount and max_amount and drops the original column
+    # i. splits amount into two columns: min_amount and max_amount and drops the original column
+    df[['min_amount', 'max_amount']] = df['amount'].str.split('-', expand=True) 
     df.drop(columns=['amount'], inplace=True)
-
-    for x in ['min_amount', 'max_amount']:  # ii. cleans min_amount and max_amount columns 
+    
+    # ii. cleans min_amount and max_amount columns
+    for x in ['min_amount', 'max_amount']:   
         df[x] = df[x].str.replace('$', '')
         df[x] = df[x].str.replace(',', '')
         df[x] = df[x].str.replace('+', '')
