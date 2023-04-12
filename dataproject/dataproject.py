@@ -133,15 +133,20 @@ def clean_data(df, print_df = False):
     df.description = df.description.astype('string') # convert to string
     print(df.description.str.contains('options', case=False).sum(), "options trades dropped") # print number of options trades dropped
     df.drop(df[df.description.str.contains('options', case=False)].index, inplace=True) # drop rows with options trading
+    
+    # j. find all representatives that have made purchases
+    print(df.representative.nunique()-df[df.action == 'purchase'].representative.nunique(), "representatives dropped because they have not made any purchases")
+    reps = df[df.action == 'purchase'].representative.unique()
+    df = df[df.representative.isin(reps)]
 
-    # j. rebase index
+    # k. rebase index
     df.sort_values(by=['representative','ticker', 'date'], inplace=True)
     df.reset_index(drop=True, inplace=True)
 
-    # k. calculate average amount
+    # l. calculate average amount
     df['amount'] = df[['min_amount', 'max_amount']].mean(axis=1)
 
-    # l. print the head of the dataframe
+    # m. print the head of the dataframe
     if print_df:
         display(df)
 
