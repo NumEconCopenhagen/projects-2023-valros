@@ -6,8 +6,8 @@ The **results** of the project can be seen from running [dataproject.ipynb](data
 
 We use the **following data**:
 
-1. Data on House Representatives' financial transactions from housestockwatcher.com
-2. Stock data from Yahoo Finance
+1. Data on House Representatives' financial transactions from [House Stockwatcher](housestockwatcher.com)
+2. Stock data from [Yahoo Finance](https://finance.yahoo.com/)
 
 Both datasets are pulled directly from their respective API's when running the code
 
