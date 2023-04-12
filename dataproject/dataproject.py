@@ -178,6 +178,17 @@ def select_rep(df, rep, print_df = False):
 
     return df
 def get_stock_data(df, print_df = False):
+    """
+    Creates list of unique tickers and downloads stock data from Yahoo Finance.
+
+    arguments:
+        df: pandas dataframe, containing the data
+        print_df: boolean, whether to print the dataframe
+
+    returns:
+        stock_df: pandas dataframe, containing the stock data
+    """
+    
 
     # a. find unique tickers, and min date
     tickers = " ".join(df.ticker.unique())
@@ -188,10 +199,15 @@ def get_stock_data(df, print_df = False):
     print("Downloading stock data...")
     stock_df = yf.download(tickers, start=min_date, end=max_date, progress=True)
 
-    # c. keep only adjusted close
+    # c. keep only adjusted close 
     stock_df = stock_df['Adj Close']
 
-    # d. print the dataframe
+    # d. rename columns when only one ticker is selected and force to pd.DataFrame
+    if len(df.ticker.unique()) == 1:
+        stock_df = pd.DataFrame(stock_df)
+        stock_df.rename(columns={'Adj Close':df.ticker.unique()[0]}, inplace=True)
+    
+    # e. print the dataframe
     if print_df:
         display(stock_df)
 
