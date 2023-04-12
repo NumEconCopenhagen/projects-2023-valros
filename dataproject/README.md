@@ -1,4 +1,5 @@
 # Data analysis project
+This project was made by, Alon Clausen, Johan Ølgaard, and Valdemar Guldager
 
 Our project is titled **How good are house representatives when investing?** and investigates house representatives performance in the financial market. Congress members are legally required to declare any transaction they or a family member performs no later than 45 days after the transaction has taken place. This data is publicly available and in this data project we want to see if the house representatives outperform the market, which could indicate that they are in violation of the STOCK (Stop Trading on Congressional Knowledge) Act from 2012.
 
