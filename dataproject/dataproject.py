@@ -2,6 +2,7 @@
 import pandas as pd
 import numpy as np
 import warnings
+import sys
 
 # b. packages for data visualization
 from IPython.display import display
@@ -211,7 +212,7 @@ def get_stock_data(df, print_df = False):
     if len(df.ticker.unique()) == 1:
         stock_df = pd.DataFrame(stock_df)
         stock_df.rename(columns={'Adj Close':df.ticker.unique()[0]}, inplace=True)
-    
+
     # e. print the dataframe
     if print_df:
         display(stock_df)
@@ -243,21 +244,23 @@ def merge_data(df,stock, print_df = False):
     # d. setting <NA> values to 0 in the action column
     df.action.fillna('none', inplace=True)
 
-    # drop ticker if there is no purchase data
+    # e. drop ticker if there is no purchase data
     df = df[df.ticker.isin(df[df.action == 'purchase'].ticker.unique())]
 
-    # find first purchase date for each ticker
+    # f. find first purchase date for each ticker
     first_purchase = df[df.action == 'purchase'].groupby('ticker').date.min().reset_index()
 
-    # drop all rows before the first purchase date
+    # g. drop all rows before the first purchase date
     df = pd.merge(df, first_purchase, on='ticker', how='left')
     df = df[df.date_x >= df.date_y]
     df.drop(columns=['date_y'], inplace=True)
     df.rename(columns={'date_x':'date'}, inplace=True)
 
+    # h. rebase index
     df.sort_values(by=['ticker', 'date'], inplace=True)
     df.reset_index(drop=True, inplace=True)
-    # c. print the dataframe
+
+    # i. print the dataframe
     if print_df:
         display(df)
     
@@ -392,15 +395,20 @@ def widget(df,name):
     # c. get stock data
     stock = get_stock_data(df)
 
-    # d. merge the dataframes
+    # d. stops the function if no stock data is found
+    if stock.empty:
+        print('No stock data found')
+        return
+
+    # e. merge the dataframes
     merge = merge_data(df,stock)
 
-    # e. calculate portfolio and weighted return
+    # f. calculate portfolio and weighted return
     portfolio_data = portfolio(merge)
 
-    # f. calculate daily return on entire portfolio
+    # g. calculate daily return on entire portfolio
     portfolio_return = daily_return(portfolio_data)
 
-    # g. plot the return
+    # h. plot the return
     plot_return(portfolio_return, include_sp500 = True, title = name)
 
