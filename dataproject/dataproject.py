@@ -355,7 +355,7 @@ def plot_return(df, include_sp500 = False, title = 'Nancy Pelosi'):
 
     # b. set the x-axis label
     plt.xlabel('Date')
-
+    
     # c. change y-axis to percentage
     plt.gca().yaxis.set_major_formatter(mtick.PercentFormatter(1.0))
 
@@ -367,6 +367,7 @@ def plot_return(df, include_sp500 = False, title = 'Nancy Pelosi'):
         sp500 = yf.download('^GSPC', start=min_date, end=max_date)
         sp500['cum_return'] = (1 + sp500['Adj Close'].pct_change()).cumprod()-1
         sp500['cum_return'].plot()
+        plt.legend([f'{title} Portfolio', 'S&P 500'])
 
     plt.show()
 
