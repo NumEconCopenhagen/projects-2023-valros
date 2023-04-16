@@ -386,29 +386,34 @@ def widget(df,name):
         plot of the portfolio return and the S&P 500
     """
 
-    # a. copies the dataframe to avoid modifying the original
+    # a. stops process if "Click here" is selected
+    if name == 'Click here':
+        print('Please select a representative')
+        return None
+
+    # b. copies the dataframe to avoid modifying the original
     df = df.copy()
 
-    # b. select the representative
+    # c. select the representative
     df = select_rep(df, name)
 
-    # c. get stock data
+    # d. get stock data
     stock = get_stock_data(df)
 
-    # d. stops the function if no stock data is found
+    # e. stops the function if no stock data is found
     if stock.empty:
         print('No stock data found')
-        return
+        return None
 
-    # e. merge the dataframes
+    # f. merge the dataframes
     merge = merge_data(df,stock)
 
-    # f. calculate portfolio and weighted return
+    # g. calculate portfolio and weighted return
     portfolio_data = portfolio(merge)
 
-    # g. calculate daily return on entire portfolio
+    # h. calculate daily return on entire portfolio
     portfolio_return = daily_return(portfolio_data)
 
-    # h. plot the return
+    # i. plot the return
     plot_return(portfolio_return, include_sp500 = True, title = name)
 
