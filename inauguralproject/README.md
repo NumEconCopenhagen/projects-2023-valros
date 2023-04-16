@@ -6,5 +6,6 @@ The only required Python file to run the code it [HouseholdSpecializationModel.p
 
 **Dependencies:** The following packages are required to run the code
 1. ```scipy```
-2. ```numpy``` 
-3. ```matplotlib```
+2. ```numpy```
+3. ```pandas``` 
+4. ```matplotlib```
