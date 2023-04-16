@@ -15,3 +15,8 @@ Both datasets are pulled directly from their respective API's when running the c
 **Dependencies:** The following instalations are required to run the code:
 - ``yfinance`` can be installed by running ``pip install yfinance``
 - ``request`` can be installed by running ``pip install requests``
+- ``ipywidgets``
+- ``pandas``
+- ``numpy``
+- ``matplotlib``
+- `ÌPython``
