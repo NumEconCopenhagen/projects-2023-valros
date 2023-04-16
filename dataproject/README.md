@@ -12,6 +12,6 @@ We use the **following data**:
 
 Both datasets are pulled directly from their respective API's when running the code
 
-**Dependencies:** Apart from a standard Anaconda Python 3 installation and the ``.py``-file, the project requires the following installations:
+**Dependencies:** The project requires the following installations:
 - ``yfinance`` can be installed by running ``pip install yfinance``
 - ``request`` can be installed by running ``pip install requests``
