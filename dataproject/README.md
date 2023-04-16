@@ -19,4 +19,4 @@ Both datasets are pulled directly from their respective API's when running the c
 - ``pandas``
 - ``numpy``
 - ``matplotlib``
-- `ÌPython``
+- ``IPython``
