@@ -12,6 +12,6 @@ We use the **following data**:
 
 Both datasets are pulled directly from their respective API's when running the code
 
-**Dependencies:** The project requires the following installations:
+**Dependencies:** The following instalations are required to run the code:
 - ``yfinance`` can be installed by running ``pip install yfinance``
 - ``request`` can be installed by running ``pip install requests``
