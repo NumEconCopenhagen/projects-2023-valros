@@ -5,7 +5,7 @@ The **results** of the project can be seen from running [inauguralproject.ipynb]
 The only required Python file to run the code it [HouseholdSpecializationModel.py](HouseholdSpecializationModel.py)
 
 **Dependencies:** The following packages are required to run the code
-1. ```scipy```
-2. ```numpy```
-3. ```pandas``` 
-4. ```matplotlib```
+- ```scipy```
+- ```numpy```
+- ```pandas``` 
+- ```matplotlib```
