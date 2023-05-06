@@ -6,6 +6,8 @@ import sys
 
 # b. packages for data visualization
 from IPython.display import display
+from IPython.display import clear_output
+import ipywidgets as wg
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 
@@ -14,7 +16,7 @@ import requests
 import yfinance as yf
 
 
-# d. remove all FutureWarning, which are not relevant for this project
+# d. remove all FutureWarning, which are not relevant for this pro ject
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 def fetch_data(print_df = False):
@@ -153,7 +155,6 @@ def clean_data(df, print_df = False):
 
     return df
 
-
 def select_rep(df, rep, print_df = False):
     """
     Selects a representative from the dataframe.
@@ -183,6 +184,7 @@ def select_rep(df, rep, print_df = False):
         display(df)
 
     return df
+
 def get_stock_data(df, print_df = False):
     """
     Creates list of unique tickers and downloads stock data from Yahoo Finance.
@@ -343,7 +345,6 @@ def daily_return(df, print_df = False):
         display(df)
     return df
 
-
 def plot_return(df, include_sp500 = False, title = 'Nancy Pelosi'):
     """
     Plots the cummulitive return of the portfolio
@@ -416,4 +417,3 @@ def widget(df,name):
 
     # i. plot the return
     plot_return(portfolio_return, include_sp500 = True, title = name)
-
