@@ -6,7 +6,6 @@ import sys
 
 # b. packages for data visualization
 from IPython.display import display
-import ipywidgets as wg
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 
