@@ -50,7 +50,7 @@ class OLGModelClass():
         sim = self.sim
 
         # a. list of variables
-        household = ['C1','C2']
+        household = ['C1','C2', 'C3']
         firm = ['K','Y','K_lag']
         prices = ['w','rk','rb','r','rt']
         government = ['G','T','B','balanced_budget','B_lag']
