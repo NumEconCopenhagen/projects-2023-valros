@@ -6,13 +6,29 @@ import matplotlib.pyplot as plt
 
 class SolowModelClass:
     def __init__(self):
-        """ Initialize class"""
+        """ 
+        Initialize class
+
+        arguments:
+            none
+
+        returns:
+            none 
+        """
 
         self.par = SimpleNamespace()
         self.sim = SimpleNamespace()
 
     def setup(self):
-        """ Define baseline parameter values"""
+        """
+        Define baseline parameter values
+        
+        arguments:
+            none
+        
+        returns:
+            none
+        """
 
         par = self.par
 
@@ -36,7 +52,15 @@ class SolowModelClass:
         
 
     def analytic_ss(do_print=False):
-        
+        """
+        Uses sympy to solve for the steady state of the model.
+
+        arguments:
+            do_print = True or False (default = False)
+
+        returns:
+            zss = analytical steady state of z
+        """
         # a. set up sympy symbols
         zstar = sm.symbols('z')
         alpha = sm.symbols('alpha')
@@ -45,7 +69,9 @@ class SolowModelClass:
         s_Y = sm.symbols('s_Y')
         s_E = sm.symbols('s_E')
         g = sm.symbols('g')
-        n = sm.symbols('n')        
+        n = sm.symbols('n')
+
+
         # b. define equation for ss
         denom = (((1 + g) * (1 + n))**(1-epsilon-alpha) * (1-s_E)**epsilon)**(1/(1-alpha))
         ss = sm.Eq(zstar,(1/denom)* (s_Y + (1 - delta) * zstar))
@@ -56,12 +82,24 @@ class SolowModelClass:
         # d. print ss
         if do_print==True:
             print(sm.Eq(zstar,zss))
+        
         # e. return ss
         return zss
 
     def evaluate_ss(self, ss, do_print=False):
-        par = self.par
+        """
+        Evaluates the analytical steady state of the model.
 
+        arguments:
+            ss = analytical steady state of model
+            do_print = True or False (default = False)
+
+        returns:
+            sol = steady state value of model
+            if do_print = True, then also prints the steady state value
+        """
+
+        par = self.par
         # a. set up sympy symbols
         alpha = sm.symbols('alpha')
         epsilon = sm.symbols('epsilon')
@@ -85,7 +123,16 @@ class SolowModelClass:
         return sol
 
     def solve_ss(self,method='bisect', do_print=False):
-        """ Solve for the steady state of the model. """
+        """ 
+        Solve for the steady state of the model. 
+        arguments: 
+            method = 'bisect' or 'brentq' (default = 'bisect')
+            do_print = True or False (default = False)
+        
+        returns:
+            result = steady state value of z
+            if do_print = True, then also prints the steady state value
+        """
         
         par = self.par
 
@@ -102,9 +149,20 @@ class SolowModelClass:
         if do_print == True:
             print(result)
         
+        # d. return result
         return result
     
     def simulate(self,do_print=False):
+        """
+        Simulates the model.
+
+        arguments:
+            do_print = True or False (default = False)
+
+        returns:
+            if do_print = True, then plots the simulated model for K, Y, L, A, E and R
+        """
+
         par = self.par
         sim = self.sim
 
@@ -140,21 +198,30 @@ class SolowModelClass:
         # d. plot
         if do_print == True:
             fig, ax = plt.subplots(2,3)
-            ax[0,0].plot(sim.t,sim.K,label='$K_t$')
-            ax[0,0].set_title('Capital')
-            ax[1,0].plot(sim.t,sim.Y,label='$Y_t$')
-            ax[1,0].set_title('Output')
-            ax[0,2].plot(sim.t,sim.R,label='$R_t$')
-            ax[0,2].set_title('Limited ressource')
-            ax[0,1].plot(sim.t,sim.L,label='$L_t$')
-            ax[0,1].set_title('Labor')
-            ax[1,1].plot(sim.t,sim.A,label='$A_t$')
-            ax[1,1].set_title('Technology')
-            ax[1,2].plot(sim.t,sim.E,label='$E_t$')
-            ax[1,2].set_title('Consumption of limited ressource')
+            ax[0,0].plot(sim.t,sim.K)
+            ax[0,0].set_title('Capital stock, $K_t$')
+            ax[1,0].plot(sim.t,sim.Y)
+            ax[1,0].set_title('Output, $Y_t$')
+            ax[0,1].plot(sim.t,sim.L)
+            ax[0,1].set_title('Labor, $L_t$')
+            ax[1,1].plot(sim.t,sim.A)
+            ax[1,1].set_title('Technology, $A_t$')
+            ax[0,2].plot(sim.t,sim.R)
+            ax[0,2].set_title('Limited ressource, $R_t$')
+            ax[1,2].plot(sim.t,sim.E)
+            ax[1,2].set_title('Consumption of limited ressource, $E_t$')
             plt.show()
     
     def convergence_plot(self):
+        """
+        Plots the phase diagram for the model.
+
+        arguments:
+            none
+
+        returns:
+            plot of the phase diagram
+        """
         par = self.par
 
         # a. simulate
