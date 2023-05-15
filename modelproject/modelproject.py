@@ -6,16 +6,17 @@ import matplotlib.pyplot as plt
 
 class SolowModelClass:
     def __init__(self):
+        """ Initialize class"""
 
         self.par = SimpleNamespace()
         self.sim = SimpleNamespace()
 
     def setup(self):
-        """ Initialize the class with default values. """
+        """ Define baseline parameter values"""
 
         par = self.par
 
-        # a. Model parameters
+        # a. model parameters
         par.alpha = 1/3
         par.epsilon = 1/6
         par.delta = 0.05
@@ -24,7 +25,7 @@ class SolowModelClass:
         par.n = 0.01
         par.g = 0.02
 
-        # b. Initial values
+        # b. initial values
         par.K0 = 1 # initial capital
         par.R0 = 1 # initial amount of limited resource
         par.L0 = 1 # initial labor
