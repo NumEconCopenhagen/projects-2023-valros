@@ -51,7 +51,7 @@ class SolowModelClass:
         par.T = 100 # number of periods
         
 
-    def analytic_ss(do_print=False):
+    def analytic_ss(extended=False,do_print=False):
         """
         Uses sympy to solve for the steady state of the model.
 
