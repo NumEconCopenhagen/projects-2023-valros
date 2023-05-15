@@ -9,7 +9,6 @@ class SolowModelClass:
 
         self.par = SimpleNamespace()
         self.sim = SimpleNamespace()
-        self.ana = SimpleNamespace()
 
     def setup(self):
         """ Initialize the class with default values. """
