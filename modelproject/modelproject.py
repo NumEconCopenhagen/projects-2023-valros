@@ -190,14 +190,14 @@ class SolowModelClass:
         if do_print == True:
             if ext == True: # adding plot of limited ressource
                 fig, ax = plt.subplots(2,3)
-                fig.suptitle('Simulated model with limited ressource')
+                fig.suptitle('Simulated model with limited ressource', size = 20)
                 ax[0,2].plot(sim.t,sim.R)
                 ax[0,2].set_title('Limited ressource, $R_t$')
                 ax[1,2].plot(sim.t,sim.E)
                 ax[1,2].set_title('Consumption of limited ressource, $E_t$')
             else:
                 fig, ax = plt.subplots(2,2)
-                fig.suptitle('Simulated model')
+                fig.suptitle('Simulated model', size = 20)
             ax[0,0].plot(sim.t,sim.K)
             ax[0,0].set_title('Capital stock, $K_t$')
             ax[1,0].plot(sim.t,sim.Y)
@@ -244,8 +244,8 @@ class SolowModelClass:
         # f. plot z[t+1] against z[t]
         fig = plt.figure()
         ax = fig.add_subplot(1,1,1)
-        ax.plot(z,z_1)
-        ax.plot(linex,liney,'--', color='black')
+        ax.plot(z,z_1, label = f'$z_{{t+1}}$')
+        ax.plot(linex,liney,'--', color='black', label = '45 degree line')
         ax.set_xlabel('$z_t$')
         ax.set_ylabel('$z_{t+1}$')
         ax.plot(ss,ss,'o', color='black', label=f'Steady state {ss:.4f}')
