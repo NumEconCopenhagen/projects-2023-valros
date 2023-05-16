@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 class SolowModelClass:
     def __init__(self):
         """ 
-        Initialize class
+        Initialize class and create empty simple namespace.
 
         arguments:
             none
@@ -17,23 +17,25 @@ class SolowModelClass:
             none 
         """
 
+        # a. create empty simple namespace
         self.par = SimpleNamespace()
         self.sim = SimpleNamespace()
 
     def setup(self):
         """
-        Define baseline parameter values
+        Define parameter values
         
         arguments:
-            none
+            ext = include extended model (default = False)
         
         returns:
             none
         """
 
+        # a. load simple namespace
         par = self.par
 
-        # a. model parameters
+        # b. set model parameters
         par.alpha = 1/3
         par.epsilon = 1/6
         par.delta = 0.05
@@ -41,18 +43,14 @@ class SolowModelClass:
         par.s_E = 0.005
         par.n = 0.01
         par.g = 0.02
-
-        # b. initial values
+        
+        # c. set initial values
         par.K0 = 1 # initial capital
         par.R0 = 1 # initial amount of limited resource
         par.L0 = 1 # initial labor
         par.A0 = 1 # initial technology
 
-        # c. simulation parameters
-        par.T = 100 # number of periods
-        
-
-    def evaluate_ss(self, ss, do_print=False):
+    def evaluate_ss(self, ss, ext = False, do_print=False):
         """
         Evaluates the analytical steady state of the model.
 
@@ -65,8 +63,16 @@ class SolowModelClass:
             if do_print = True, then also prints the steady state value
         """
 
+        # a. load parameters
         par = self.par
-        # a. set up sympy symbols
+
+        # b. adjust parameters if extended model
+        if ext == True:
+            eps = par.epsilon
+        else:
+            eps = 0
+
+        # c. set up sympy symbols
         alpha = sm.symbols('alpha')
         epsilon = sm.symbols('epsilon')
         delta = sm.symbols('delta')
@@ -75,24 +81,24 @@ class SolowModelClass:
         g = sm.symbols('g')
         n = sm.symbols('n')   
 
-        # a. lambdify zss
+        # d. lambdify zss
         eq = sm.lambdify((alpha,epsilon,delta,s_Y,s_E,g,n),ss)
 
-        # b. evaluate
-        sol = eq(par.alpha,par.epsilon,par.delta,par.s_Y,par.s_E,par.g,par.n)
+        # e. evaluate
+        sol = eq(par.alpha,eps,par.delta,par.s_Y,par.s_E,par.g,par.n)
 
-        # c. print
+        # f. print
         if do_print==True:
             print(f'z = {sol}')
         
-        # d. return
+        # g. return
         return sol
 
-    def solve_ss(self,method='bisect', do_print=False):
+    def solve_ss(self,method='brentq', ext = False, do_print=False):
         """ 
         Solve for the steady state of the model. 
         arguments: 
-            method = 'bisect' or 'brentq' (default = 'bisect')
+            method = 'bisect' or 'brentq' (default = 'brentq')
             do_print = True or False (default = False)
         
         returns:
@@ -100,70 +106,95 @@ class SolowModelClass:
             if do_print = True, then also prints the steady state value
         """
         
+        # a. load parameters
         par = self.par
 
-        # a. objective function
-        obj = lambda z: (1 / (((1+par.g)*(1+par.n))**(1-par.epsilon-par.alpha)*(1-par.s_E)**(par.epsilon))) * (par.s_Y + (1-par.delta)*z)**(1-par.alpha) * z**par.alpha - z
+        # b. adjust parameters if extended model
+        if ext == True:
+            eps = par.epsilon
+        else:
+            eps = 0
 
-        #. b. call root finder
+        # c. objective function
+        obj = lambda z: (1 / (((1+par.g)*(1+par.n))**(1-eps-par.alpha)*(1-par.s_E)**(eps))) * (par.s_Y + (1-par.delta)*z)**(1-par.alpha) * z**par.alpha - z
+
+        # d. call root finder
         if method == 'bisect' or method == 'brentq':
             result = optimize.root_scalar(obj,bracket=[0.1,100],method=method)
         else:
             raise ValueError('method must be bisect, or brentq')
         
-        # c. print result
+        # e. print result
         if do_print == True:
             print(result)
         
-        # d. return result
+        # f. return result
         return result
     
-    def simulate(self,do_print=False):
+    def simulate(self, periods = 100, ext=False, do_print=False):
         """
         Simulates the model.
 
         arguments:
             do_print = True or False (default = False)
+            periods = number of periods to simulate (default = 100)
+            ext = include extended model (default = False)
 
         returns:
             if do_print = True, then plots the simulated model for K, Y, L, A, E and R
         """
-
+        # a. load parameters
         par = self.par
         sim = self.sim
+        T = periods
 
-        # a. initialize
-        sim.K = np.empty(par.T+1)
-        sim.R = np.empty(par.T+1)
-        sim.L = np.empty(par.T+1)
-        sim.A = np.empty(par.T+1)
-        sim.Y = np.empty(par.T+1)
-        sim.E = np.empty(par.T+1)
-        sim.z = np.empty(par.T+1)
-        sim.t = np.linspace(0,par.T+1,par.T+1)
+        # b. adjust parameters if extended model
+        if ext == True:
+            eps = par.epsilon
+        else:
+            eps = 0
 
-        # b. initial values
+        # c. create empty arrays to store simulation
+        sim.K = np.empty(T+1)
+        sim.R = np.empty(T+1)
+        sim.L = np.empty(T+1)
+        sim.A = np.empty(T+1)
+        sim.Y = np.empty(T+1)
+        sim.E = np.empty(T+1)
+        sim.z = np.empty(T+1)
+        sim.t = np.linspace(0,T+1,T+1)
+
+        # d. initial values
         sim.K[0] = par.K0
         sim.R[0] = par.R0
         sim.L[0] = par.L0
         sim.A[0] = par.A0
         sim.E[0] = par.s_E * sim.R[0]
-        sim.Y[0] = sim.K[0]**par.alpha * (sim.A[0] * sim.L[0])**(1-par.alpha-par.epsilon) * sim.E[0]**par.epsilon
+        sim.Y[0] = sim.K[0]**par.alpha * (sim.A[0] * sim.L[0])**(1-par.alpha-eps) * sim.E[0]**eps
         sim.z[0] = sim.K[0] / sim.Y[0]
 
-        # c. simulate
-        for t in range(par.T):
+        # e. simulate
+        for t in range(T):
             sim.K[t+1] = (1-par.delta) * sim.K[t] + par.s_Y * sim.Y[t]
             sim.R[t+1] = (1-par.s_E) * sim.R[t]
             sim.L[t+1] = (1+par.n) * sim.L[t]
             sim.A[t+1] = (1+par.g) * sim.A[t]
             sim.E[t+1] = par.s_E * sim.R[t+1]
-            sim.Y[t+1] = sim.K[t+1]**par.alpha * (sim.A[t+1] * sim.L[t+1])**(1-par.alpha-par.epsilon) * sim.E[t+1]**par.epsilon
+            sim.Y[t+1] = sim.K[t+1]**par.alpha * (sim.A[t+1] * sim.L[t+1])**(1-par.alpha-eps) * sim.E[t+1]**eps
             sim.z[t+1] = sim.K[t+1] / sim.Y[t+1]
         
-        # d. plot
+        # f. plot
         if do_print == True:
-            fig, ax = plt.subplots(2,3)
+            if ext == True: # adding plot of limited ressource
+                fig, ax = plt.subplots(2,3)
+                fig.suptitle('Simulated model with limited ressource')
+                ax[0,2].plot(sim.t,sim.R)
+                ax[0,2].set_title('Limited ressource, $R_t$')
+                ax[1,2].plot(sim.t,sim.E)
+                ax[1,2].set_title('Consumption of limited ressource, $E_t$')
+            else:
+                fig, ax = plt.subplots(2,2)
+                fig.suptitle('Simulated model')
             ax[0,0].plot(sim.t,sim.K)
             ax[0,0].set_title('Capital stock, $K_t$')
             ax[1,0].plot(sim.t,sim.Y)
@@ -172,39 +203,53 @@ class SolowModelClass:
             ax[0,1].set_title('Labor, $L_t$')
             ax[1,1].plot(sim.t,sim.A)
             ax[1,1].set_title('Technology, $A_t$')
-            ax[0,2].plot(sim.t,sim.R)
-            ax[0,2].set_title('Limited ressource, $R_t$')
-            ax[1,2].plot(sim.t,sim.E)
-            ax[1,2].set_title('Consumption of limited ressource, $E_t$')
             plt.show()
     
-    def convergence_plot(self):
+    def convergence_plot(self, ext=False):
         """
         Plots the phase diagram for the model.
 
         arguments:
-            none
+            ext = include extended model (default = False)
 
         returns:
             plot of the phase diagram
         """
+
+        # a. load parameters
         par = self.par
 
-        # a. simulate
+        # b. adjust parameters if extended model
+        if ext == True:
+            eps = par.epsilon
+        else:
+            eps = 0
+
+        # c. simulate
         z = np.linspace(0,2,250)
-        z_1 = (1/((1+par.g)*(1+par.n)**(1-par.alpha-par.epsilon) * (1-par.s_E)**(par.epsilon))) * (par.s_Y + (1-par.delta)*z)**(1-par.alpha) * z**(par.alpha)
+        z_1 = (1/((1+par.g)*(1+par.n)**(1-par.alpha-eps) * (1-par.s_E)**(eps))) * (par.s_Y + (1-par.delta)*z)**(1-par.alpha) * z**(par.alpha)
         
+        # d. create 45 degree line
         linex = np.linspace(0,2,250)
         liney = linex
 
-        # a. plot z[t+1] against z[t]
+        # e. add line for steady state
+        ss = self.solve_ss(ext=ext).root
+
+
+
+        # f. plot z[t+1] against z[t]
         fig = plt.figure()
         ax = fig.add_subplot(1,1,1)
         ax.plot(z,z_1)
         ax.plot(linex,liney,'--', color='black')
         ax.set_xlabel('$z_t$')
         ax.set_ylabel('$z_{t+1}$')
+        ax.plot(ss,ss,'o', color='black', label=f'Steady state {ss:.4f}')
         ax.set_title('Convergence plot')
+        plt.axhline(y=ss, color='black')
+        plt.axvline(x=ss, color='black')
+        plt.legend()
         plt.show()
         
 def analytic_ss(ext = False, do_print = False):
@@ -212,8 +257,8 @@ def analytic_ss(ext = False, do_print = False):
     Uses sympy to solve for the steady state of the model.
 
     arguments:
-        do_print = True or False (default = False)
         ext = include our extension or not (default = False)
+        do_print = True or False (default = False)
 
     returns:
         zss = analytical steady state of z
