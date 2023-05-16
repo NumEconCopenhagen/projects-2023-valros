@@ -1,7 +1,10 @@
-from types import SimpleNamespace
+# import standard modules
 import numpy as np
 from scipy import optimize
 import sympy as sm
+from types import SimpleNamespace
+
+# import plotting modules
 from IPython.display import display
 import matplotlib.pyplot as plt
 
