@@ -2,6 +2,7 @@ from types import SimpleNamespace
 import numpy as np
 from scipy import optimize
 import sympy as sm
+from IPython.display import display
 import matplotlib.pyplot as plt
 
 class SolowModelClass:
@@ -50,41 +51,6 @@ class SolowModelClass:
         # c. simulation parameters
         par.T = 100 # number of periods
         
-
-    def analytic_ss(extended=False,do_print=False):
-        """
-        Uses sympy to solve for the steady state of the model.
-
-        arguments:
-            do_print = True or False (default = False)
-
-        returns:
-            zss = analytical steady state of z
-        """
-        # a. set up sympy symbols
-        zstar = sm.symbols('z')
-        alpha = sm.symbols('alpha')
-        epsilon = sm.symbols('epsilon')
-        delta = sm.symbols('delta')
-        s_Y = sm.symbols('s_Y')
-        s_E = sm.symbols('s_E')
-        g = sm.symbols('g')
-        n = sm.symbols('n')
-
-
-        # b. define equation for ss
-        denom = (((1 + g) * (1 + n))**(1-epsilon-alpha) * (1-s_E)**epsilon)**(1/(1-alpha))
-        ss = sm.Eq(zstar,(1/denom)* (s_Y + (1 - delta) * zstar))
-
-        # c. solve for ss
-        zss = sm.solve(ss,zstar)[0]
-
-        # d. print ss
-        if do_print==True:
-            print(sm.Eq(zstar,zss))
-        
-        # e. return ss
-        return zss
 
     def evaluate_ss(self, ss, do_print=False):
         """
@@ -240,3 +206,46 @@ class SolowModelClass:
         ax.set_ylabel('$z_{t+1}$')
         ax.set_title('Convergence plot')
         plt.show()
+        
+def analytic_ss(ext = False, do_print = False):
+    """
+    Uses sympy to solve for the steady state of the model.
+
+    arguments:
+        do_print = True or False (default = False)
+        ext = include our extension or not (default = False)
+
+    returns:
+        zss = analytical steady state of z
+    """
+    # a. set up sympy symbols
+    zstar = sm.symbols('z')
+    alpha = sm.symbols('alpha')
+    delta = sm.symbols('delta')
+    s_Y = sm.symbols('s_Y')
+    s_E = sm.symbols('s_E')
+    g = sm.symbols('g')
+    n = sm.symbols('n')
+
+    if ext == True:
+        epsilon = sm.symbols('epsilon')
+    else:
+        epsilon = 0
+
+    # b. define equation for ss
+    denom = (((1 + g) * (1 + n))**(1-epsilon-alpha) * (1-s_E)**epsilon)**(1/(1-alpha))
+    ss = sm.Eq(zstar,(1/denom)* (s_Y + (1 - delta) * zstar))
+
+    # c. solve for ss
+    zss = sm.solve(ss,zstar)[0]
+
+    # d. print ss
+    if do_print == True:
+        if ext == True:
+            print('The analytical steady state of the extended model is:')
+        else:
+            print('The analytical steady state of the baseline model is:')
+        display(sm.Eq(zstar,zss))
+    
+    # e. return ss
+    return zss
