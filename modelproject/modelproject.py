@@ -265,12 +265,11 @@ class SolowModelClass:
         # a. load parameters
         par = self.par
 
-        eps = par.epsilon
         # b. adjust parameters if extended model
-        #if ext == True:
-        #    eps = par.epsilon
-        #else:
-        #    eps = 0
+        if ext == True:
+            eps = par.epsilon
+        else:
+            eps = 0
 
         # c. simulate
         z = np.linspace(0,1.75,1000)
