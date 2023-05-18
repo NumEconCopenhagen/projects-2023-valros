@@ -49,7 +49,7 @@ class SolowModelClass:
         
         # c. set initial values
         par.K0 = 1 # initial capital
-        par.R0 = 1 # initial amount of limited resource
+        par.R0 = 200 # initial amount of limited resource
         par.L0 = 1 # initial labor
         par.A0 = 1 # initial technology
 
