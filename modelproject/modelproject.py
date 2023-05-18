@@ -8,6 +8,49 @@ from types import SimpleNamespace
 from IPython.display import display
 import matplotlib.pyplot as plt
 
+def analytic_ss(ext = False, do_print = False):
+    """
+    Uses sympy to solve for the steady state of the model.
+
+    arguments:
+        ext = include our extension or not (default = False)
+        do_print = True or False (default = False)
+
+    returns:
+        zss = analytical steady state of z
+    """
+    # a. set up sympy symbols
+    zstar = sm.symbols('z')
+    alpha = sm.symbols('alpha')
+    delta = sm.symbols('delta')
+    s_Y = sm.symbols('s_Y')
+    s_E = sm.symbols('s_E')
+    g = sm.symbols('g')
+    n = sm.symbols('n')
+
+    if ext == True:
+        epsilon = sm.symbols('epsilon')
+    else:
+        epsilon = 0
+
+    # b. define equation for ss
+    denom = (((1 + g) * (1 + n))**(1-epsilon-alpha) * (1-s_E)**epsilon)**(1/(1-alpha))
+    ss = sm.Eq(zstar,(1/denom)* (s_Y + (1 - delta) * zstar))
+
+    # c. solve for ss
+    zss = sm.solve(ss,zstar)[0]
+
+    # d. print ss
+    if do_print == True:
+        if ext == True:
+            print('The analytical steady state of the extended model is:')
+        else:
+            print('The analytical steady state of the baseline model is:')
+        display(sm.Eq(zstar,zss))
+    
+    # e. return ss
+    return zss
+
 class SolowModelClass:
     def __init__(self):
         """ 
@@ -222,24 +265,23 @@ class SolowModelClass:
         # a. load parameters
         par = self.par
 
+        eps = par.epsilon
         # b. adjust parameters if extended model
-        if ext == True:
-            eps = par.epsilon
-        else:
-            eps = 0
+        #if ext == True:
+        #    eps = par.epsilon
+        #else:
+        #    eps = 0
 
         # c. simulate
-        z = np.linspace(0,2,250)
-        z_1 = (1/((1+par.g)*(1+par.n)**(1-par.alpha-eps) * (1-par.s_E)**(eps))) * (par.s_Y + (1-par.delta)*z)**(1-par.alpha) * z**(par.alpha)
+        z = np.linspace(0,1.75,1000)
+        z_1 = (1/(((1+par.g)*(1+par.n))**(1-par.alpha-eps) * (1-par.s_E)**(eps))) * (par.s_Y + (1-par.delta)*z)**(1-par.alpha) * z**(par.alpha)
         
         # d. create 45 degree line
-        linex = np.linspace(0,2,250)
+        linex = np.linspace(0,1.75,2)
         liney = linex
 
         # e. add line for steady state
         ss = self.solve_ss(ext=ext).root
-
-
 
         # f. plot z[t+1] against z[t]
         fig = plt.figure()
@@ -254,46 +296,3 @@ class SolowModelClass:
         plt.axvline(x=ss, color='black')
         plt.legend()
         plt.show()
-        
-def analytic_ss(ext = False, do_print = False):
-    """
-    Uses sympy to solve for the steady state of the model.
-
-    arguments:
-        ext = include our extension or not (default = False)
-        do_print = True or False (default = False)
-
-    returns:
-        zss = analytical steady state of z
-    """
-    # a. set up sympy symbols
-    zstar = sm.symbols('z')
-    alpha = sm.symbols('alpha')
-    delta = sm.symbols('delta')
-    s_Y = sm.symbols('s_Y')
-    s_E = sm.symbols('s_E')
-    g = sm.symbols('g')
-    n = sm.symbols('n')
-
-    if ext == True:
-        epsilon = sm.symbols('epsilon')
-    else:
-        epsilon = 0
-
-    # b. define equation for ss
-    denom = (((1 + g) * (1 + n))**(1-epsilon-alpha) * (1-s_E)**epsilon)**(1/(1-alpha))
-    ss = sm.Eq(zstar,(1/denom)* (s_Y + (1 - delta) * zstar))
-
-    # c. solve for ss
-    zss = sm.solve(ss,zstar)[0]
-
-    # d. print ss
-    if do_print == True:
-        if ext == True:
-            print('The analytical steady state of the extended model is:')
-        else:
-            print('The analytical steady state of the baseline model is:')
-        display(sm.Eq(zstar,zss))
-    
-    # e. return ss
-    return zss
