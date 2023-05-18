@@ -272,7 +272,7 @@ class SolowModelClass:
             eps = 0
 
         # c. simulate
-        z = np.linspace(0,1.75,1000)
+        z = np.linspace(0,1.75,5000)
         z_1 = (1/(((1+par.g)*(1+par.n))**(1-par.alpha-eps) * (1-par.s_E)**(eps))) * (par.s_Y + (1-par.delta)*z)**(1-par.alpha) * z**(par.alpha)
         
         # d. create 45 degree line
