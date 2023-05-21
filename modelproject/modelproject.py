@@ -4,6 +4,8 @@ from scipy import optimize
 import sympy as sm
 from types import SimpleNamespace
 
+np.random.seed(42)
+
 # import plotting modules
 from IPython.display import display
 import matplotlib.pyplot as plt
