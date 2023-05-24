@@ -4,8 +4,6 @@ from scipy import optimize
 import sympy as sm
 from types import SimpleNamespace
 
-np.random.seed(42)
-
 # import plotting modules
 from IPython.display import display
 import matplotlib.pyplot as plt
@@ -264,7 +262,7 @@ class SolowModelClass:
             ax[1,0].plot(sim.t,sim.Y)
             ax[1,0].set_title('Output, $Y_t$')
             ax[0,1].plot(sim.t,sim.z, label=r'$z_t$')
-            ax[0,1].axhline(y=ss, color='black', linestyle='--', label='Steady state')
+            ax[0,1].axhline(y=ss, color='black', linestyle='--', label=f'Steady state: {ss:.2f}')
             ax[0,1].legend()
             ax[0,1].set_title('Capital-output ratio, $z_t$')
             ax[1,1].plot(sim.t,sim.A, label=r'$A_t$')
