@@ -233,18 +233,19 @@ class SolowModelClass:
             sim.Y[t+1] = sim.K[t+1]**par.alpha * (sim.A[t+1] * sim.L[t+1])**(1-par.alpha-eps) * sim.E[t+1]**eps
             sim.z[t+1] = sim.K[t+1] / sim.Y[t+1]
         
-        # f. plot
+       # f. plot
         if do_print == True:
             if ext == True: # adding plot of limited ressource
-                fig, ax = plt.subplots(2,3)
+                fig, ax = plt.subplots(2, 3, figsize=(15, 10))
                 fig.suptitle('Simulated model with limited ressource', size = 20)
                 ax[0,2].plot(sim.t,sim.R)
                 ax[0,2].set_title('Limited ressource, $R_t$')
                 ax[1,2].plot(sim.t,sim.E)
                 ax[1,2].set_title('Consumption of limited ressource, $E_t$')
             else:
-                fig, ax = plt.subplots(2,2)
+                fig, ax = plt.subplots(2, 2, figsize=(15, 10))
                 fig.suptitle('Simulated model', size = 20)
+                
             ax[0,0].plot(sim.t,sim.K)
             ax[0,0].set_title('Capital stock, $K_t$')
             ax[1,0].plot(sim.t,sim.Y)
@@ -253,7 +254,10 @@ class SolowModelClass:
             ax[0,1].set_title('Labor, $L_t$')
             ax[1,1].plot(sim.t,sim.A)
             ax[1,1].set_title('Technology, $A_t$')
+
+            plt.subplots_adjust(wspace=0.4, hspace=0.4)
             plt.show()
+
     
     def convergence_plot(self, ext=False):
         """
