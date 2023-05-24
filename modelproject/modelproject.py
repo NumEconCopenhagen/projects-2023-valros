@@ -85,17 +85,17 @@ class SolowModelClass:
         par = self.par
 
         # b. set model parameters
-        par.alpha = 1/3
-        par.epsilon = 1/6
-        par.delta = 0.05
-        par.s_Y = 0.1
-        par.s_E = 0.005
-        par.n = 0.01
-        par.g = 0.02
+        par.alpha = 1/3 # return to capital
+        par.epsilon = 1/6 # return to limited resource
+        par.delta = 0.05 # depreciation rate
+        par.s_Y = 0.1 # savings rate
+        par.s_E = 0.01 # consumption rate for limited resource
+        par.n = 0.01 # population growth rate
+        par.g = 0.02 # technological growth rate
         
         # c. set initial values
         par.K0 = 1 # initial capital
-        par.R0 = 200 # initial amount of limited resource
+        par.R0 = 100 # initial amount of limited resource
         par.L0 = 1 # initial labor
         par.A0 = 1 # initial technology
 
@@ -146,6 +146,7 @@ class SolowModelClass:
     def solve_ss(self,method='brentq', ext = False, do_print=False):
         """ 
         Solve for the steady state of the model. 
+
         arguments: 
             method = 'bisect' or 'brentq' (default = 'brentq')
             do_print = True or False (default = False)
@@ -299,26 +300,25 @@ class SolowModelClass:
         plt.legend()
         plt.show()
     
-    def simulate_param(self, periods = 100, ext=True, do_print=True, K0=1, R0=1, L0=1, A0=1, s_E=0.5, alpha=0.3, delta=0.1, s_Y=0.2, n=0.02, g=0.02, epsilon=0.1):
+    def simulate_widget(self, periods = 100, alpha=0.33, epsilon=0.17, delta=0.05, s_Y=0.1, s_E=0.01, n=0.01, g=0.02):
         """
-        Simulates the model with parameters and widgets.
+        Simulates the model with whilst allowing for changes in parameters.
 
         arguments:
-            do_print = True or False (default = False)
             periods = number of periods to simulate (default = 100)
-            ext = include extended model (default = False)
+            alpha = return on capital (default = 0.33)
+            epsilon = return on the limited ressource (default = 0.17)
+            delta = depreciation rate (default = 0.05)
+            s_Y = savings rate (default = 0.1)
+            s_E = consumption rate of limited ressource (default = 0.01)
+            n = population growth rate (default = 0.01)
+            g = technology growth rate (default = 0.02)
 
         returns:
-            if do_print = True, then plots the simulated model for K, Y, L, A, E and R
+            plot of the simulated model
         """
-        # a. load parameters
+        # a. setting parameters
         par = self.par
-        sim = self.sim
-        T = periods
-        par.K0 = K0
-        par.R0 = R0
-        par.L0 = L0
-        par.A0 = A0
         par.s_E = s_E
         par.alpha = alpha
         par.delta = delta
@@ -327,61 +327,11 @@ class SolowModelClass:
         par.g = g
         par.epsilon = epsilon
 
-        # b. adjust parameters if extended model
-        if ext == True:
-            eps = par.epsilon
-        else:
-            eps = 0
-
-        # c. create empty arrays to store simulation
-        sim.K = np.empty(T+1)
-        sim.R = np.empty(T+1)
-        sim.L = np.empty(T+1)
-        sim.A = np.empty(T+1)
-        sim.Y = np.empty(T+1)
-        sim.E = np.empty(T+1)
-        sim.z = np.empty(T+1)
-        sim.t = np.linspace(0,T+1,T+1)
-
-        # d. initial values
-        sim.K[0] = par.K0
-        sim.R[0] = par.R0
-        sim.L[0] = par.L0
-        sim.A[0] = par.A0
-        sim.E[0] = par.s_E * sim.R[0]
-        sim.Y[0] = sim.K[0]**par.alpha * (sim.A[0] * sim.L[0])**(1-par.alpha-eps) * sim.E[0]**eps
-        sim.z[0] = sim.K[0] / sim.Y[0]
-
-        # e. simulate
-        for t in range(T):
-            sim.K[t+1] = (1-par.delta) * sim.K[t] + par.s_Y * sim.Y[t]
-            sim.R[t+1] = (1-par.s_E) * sim.R[t]
-            sim.L[t+1] = (1+par.n) * sim.L[t]
-            sim.A[t+1] = (1+par.g) * sim.A[t]
-            sim.E[t+1] = par.s_E * sim.R[t+1]
-            sim.Y[t+1] = sim.K[t+1]**par.alpha * (sim.A[t+1] * sim.L[t+1])**(1-par.alpha-eps) * sim.E[t+1]**eps
-            sim.z[t+1] = sim.K[t+1] / sim.Y[t+1]
+        # b. checking for error in parameters
+        if par.alpha + par.epsilon > 1:
+            raise ValueError('alpha + epsilon must be less than or equal to 1')
         
-        # f. plot
-        if do_print == True:
-            if ext == True: # adding plot of limited ressource
-                fig, ax = plt.subplots(2,3)
-                fig.suptitle('Simulated model with limited ressource', size = 20)
-                ax[0,2].plot(sim.t,sim.R)
-                ax[0,2].set_title('Limited ressource, $R_t$')
-                ax[1,2].plot(sim.t,sim.E)
-                ax[1,2].set_title('Consumption of limited ressource, $E_t$')
-            else:
-                fig, ax = plt.subplots(2,2)
-                fig.suptitle('Simulated model', size = 20)
-            ax[0,0].plot(sim.t,sim.K)
-            ax[0,0].set_title('Capital stock, $K_t$')
-            ax[1,0].plot(sim.t,sim.Y)
-            ax[1,0].set_title('Output, $Y_t$')
-            ax[0,1].plot(sim.t,sim.L)
-            ax[0,1].set_title('Labor, $L_t$')
-            ax[1,1].plot(sim.t,sim.A)
-            ax[1,1].set_title('Technology, $A_t$')
-            plt.show()
+        # c. simulate and plot
+        self.simulate(periods=periods, ext=True, do_print=True)
     
     
