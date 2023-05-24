@@ -181,7 +181,7 @@ class SolowModelClass:
         # f. return result
         return result
     
-    def simulate(self, periods = 100, ext=False, do_print=False):
+    def simulate(self, periods = 100, ext=False, do_print=False, shock_period=0, shock_size=0):
         """
         Simulates the model.
 
@@ -189,6 +189,8 @@ class SolowModelClass:
             do_print = True or False (default = False)
             periods = number of periods to simulate (default = 100)
             ext = include extended model (default = False)
+            shock_period = period of shock (default = 0)
+            shock_size = size of shock, i.e. amount of capital destroyed (default = 0)
 
         returns:
             if do_print = True, then plots the simulated model for K, Y, L, A, E and R
@@ -197,6 +199,11 @@ class SolowModelClass:
         par = self.par
         sim = self.sim
         T = periods
+
+        # b. check if shock_period is in range of periods, if not set shock to 0 to be ignored
+        if shock_period > T:
+            shock_period = 0
+            shock_size = 0
 
         # b. adjust parameters if extended model
         if ext == True:
@@ -236,7 +243,20 @@ class SolowModelClass:
         sim.z[0] = sim.K[0] / sim.Y[0]
 
         # e. simulate
-        for t in range(T):
+        for t in range(shock_period):
+            sim.K[t+1] = (1-par.delta) * sim.K[t] + par.s_Y * sim.Y[t]
+            sim.R[t+1] = (1-par.s_E) * sim.R[t]
+            sim.L[t+1] = (1+par.n) * sim.L[t]
+            sim.A[t+1] = (1+par.g) * sim.A[t]
+            sim.E[t+1] = par.s_E * sim.R[t+1]
+            sim.Y[t+1] = sim.K[t+1]**par.alpha * (sim.A[t+1] * sim.L[t+1])**(1-par.alpha-eps) * sim.E[t+1]**eps
+            sim.z[t+1] = sim.K[t+1] / sim.Y[t+1]
+        
+        # f. set capital stock back to initial value
+        sim.K[shock_period] = sim.K[shock_period]*(1-shock_size)
+
+        # g. simulate for remaining periods
+        for t in range(shock_period,T):
             sim.K[t+1] = (1-par.delta) * sim.K[t] + par.s_Y * sim.Y[t]
             sim.R[t+1] = (1-par.s_E) * sim.R[t]
             sim.L[t+1] = (1+par.n) * sim.L[t]
@@ -245,7 +265,7 @@ class SolowModelClass:
             sim.Y[t+1] = sim.K[t+1]**par.alpha * (sim.A[t+1] * sim.L[t+1])**(1-par.alpha-eps) * sim.E[t+1]**eps
             sim.z[t+1] = sim.K[t+1] / sim.Y[t+1]
 
-        # f. plot
+        # h. plot
         if do_print == True:
             if ext == True: # adding plot of limited ressource
                 fig, ax = plt.subplots(2, 3)
@@ -335,7 +355,7 @@ class SolowModelClass:
         plt.legend()
         plt.show()
     
-    def simulate_widget(self, periods = 100, alpha=0.33, epsilon=0.17, delta=0.05, s_Y=0.1, s_E=0.01, n=0.01, g=0.02):
+    def simulate_widget(self, periods = 100, shock_period=0, shock_size=0, alpha=0.33, epsilon=0.17, delta=0.05, s_Y=0.1, s_E=0.01, n=0.01, g=0.02):
         """
         Simulates the model with whilst allowing for changes in parameters.
 
@@ -367,7 +387,7 @@ class SolowModelClass:
             raise ValueError('alpha + epsilon must be less than or equal to 1')
         
         # c. simulate and plot
-        self.simulate(periods=periods, ext=True, do_print=True)
+        self.simulate(periods=periods, ext=True, do_print=True, shock_period=shock_period, shock_size=shock_size)
 
     def convergence_widget(self, alpha=0.33, epsilon=0.17, delta=0.05, s_Y=0.1, s_E=0.01, n=0.01, g=0.02):
         par = self.par
