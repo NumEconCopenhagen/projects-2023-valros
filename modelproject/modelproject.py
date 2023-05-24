@@ -138,7 +138,7 @@ class SolowModelClass:
 
         # f. print
         if do_print==True:
-            print(f'z = {sol}')
+            print(f'Analytical solution: z = {sol}')
         
         # g. return
         return sol
@@ -171,11 +171,14 @@ class SolowModelClass:
         # d. call root finder
         if method == 'bisect' or method == 'brentq':
             result = optimize.root_scalar(obj,bracket=[0.1,100],method=method)
+        elif method == 'secant':
+            result = optimize.root_scalar(obj,x0=0.1,x1=100,method=method)
         else:
-            raise ValueError('method must be bisect, or brentq')
+            raise ValueError('method must be bisect, brentq, or secant')
         
         # e. print result
         if do_print == True:
+            print(f'Numerical solution using {method}')
             print(result)
         
         # f. return result
@@ -203,6 +206,18 @@ class SolowModelClass:
             eps = par.epsilon
         else:
             eps = 0
+        
+        # c. find steady state to know where to plot
+        ss = self.solve_ss(method='secant', ext=ext).root
+
+        # d. evaluate if imaginary part is irrelevant and create message
+        if np.isclose(ss.imag,0) == True:
+            ss = ss.real
+
+        if ss < 0:
+            message = ', invalid steady state'
+        else:
+            message = ''
 
         # c. create empty arrays to store simulation
         sim.K = np.empty(T+1)
@@ -232,32 +247,33 @@ class SolowModelClass:
             sim.E[t+1] = par.s_E * sim.R[t+1]
             sim.Y[t+1] = sim.K[t+1]**par.alpha * (sim.A[t+1] * sim.L[t+1])**(1-par.alpha-eps) * sim.E[t+1]**eps
             sim.z[t+1] = sim.K[t+1] / sim.Y[t+1]
-        
-       # f. plot
+
+        # f. plot
         if do_print == True:
             if ext == True: # adding plot of limited ressource
-                fig, ax = plt.subplots(2, 3, figsize=(15, 10))
-                fig.suptitle('Simulated model with limited ressource', size = 20)
+                fig, ax = plt.subplots(2, 3)
+                fig.suptitle(f'Simulated model with limited ressource{message}', size = 20)
                 ax[0,2].plot(sim.t,sim.R)
                 ax[0,2].set_title('Limited ressource, $R_t$')
                 ax[1,2].plot(sim.t,sim.E)
                 ax[1,2].set_title('Consumption of limited ressource, $E_t$')
             else:
-                fig, ax = plt.subplots(2, 2, figsize=(15, 10))
-                fig.suptitle('Simulated model', size = 20)
-                
+                fig, ax = plt.subplots(2, 2)
+                fig.suptitle(f'Simulated model{message}', size = 20)
             ax[0,0].plot(sim.t,sim.K)
             ax[0,0].set_title('Capital stock, $K_t$')
             ax[1,0].plot(sim.t,sim.Y)
             ax[1,0].set_title('Output, $Y_t$')
-            ax[0,1].plot(sim.t,sim.L)
-            ax[0,1].set_title('Labor, $L_t$')
-            ax[1,1].plot(sim.t,sim.A)
-            ax[1,1].set_title('Technology, $A_t$')
-
-            plt.subplots_adjust(wspace=0.4, hspace=0.4)
+            ax[0,1].plot(sim.t,sim.z, label=r'$z_t$')
+            ax[0,1].axhline(y=ss, color='black', linestyle='--', label='Steady state')
+            ax[0,1].legend()
+            ax[0,1].set_title('Capital-output ratio, $z_t$')
+            ax[1,1].plot(sim.t,sim.A, label=r'$A_t$')
+            ax[1,1].plot(sim.t,sim.L, label=r'$L_t$')
+            ax[1,1].legend()
+            ax[1,1].set_title('Technology and Labour, $A_t$ and $L_t$')
+            plt.subplots_adjust(wspace=0.2, hspace=0.4)
             plt.show()
-
     
     def convergence_plot(self, ext=False):
         """
@@ -279,28 +295,46 @@ class SolowModelClass:
         else:
             eps = 0
 
-        # c. simulate
-        z = np.linspace(0,1.75,5000)
+        # c. find steady state to know where to plot
+        ss = self.solve_ss(method='secant', ext=ext).root
+
+        # d. evaluate if value is complex
+        if np.isclose(ss.imag,0) == False:
+            raise ValueError('Steady state is complex')
+        else:
+            ss = ss.real
+
+        # e. create array of z values and 45 degree line
+        if ss < 0:
+            z = np.linspace(0, 1, 5000)
+            linex = np.linspace(ss*1.1, 1, 2)
+            message = f', model does not converge'
+        else:
+            z = np.linspace(0, ss*1.1, 5000)
+            linex = np.linspace(0, ss*1.1, 2)
+            message = ''
+
+        # d. simulate
         z_1 = (1/(((1+par.g)*(1+par.n))**(1-par.alpha-eps) * (1-par.s_E)**(eps))) * (par.s_Y + (1-par.delta)*z)**(1-par.alpha) * z**(par.alpha)
         
-        # d. create 45 degree line
-        linex = np.linspace(0,1.75,2)
+        # e. create 45 degree line
         liney = linex
 
-        # e. add line for steady state
-        ss = self.solve_ss(ext=ext).root
-
-        # f. plot z[t+1] against z[t]
+        # f. crea plot z[t+1] against z[t]
         fig = plt.figure()
         ax = fig.add_subplot(1,1,1)
         ax.plot(z,z_1, label = f'$z_{{t+1}}$')
         ax.plot(linex,liney,'--', color='black', label = '45 degree line')
         ax.set_xlabel('$z_t$')
         ax.set_ylabel('$z_{t+1}$')
+        ax.set_title(f'Convergence plot{message}', size = 20)
+
+        # g. add line for steady state
         ax.plot(ss,ss,'o', color='black', label=f'Steady state {ss:.4f}')
-        ax.set_title('Convergence plot')
         plt.axhline(y=ss, color='black')
         plt.axvline(x=ss, color='black')
+        
+        # h. add legend and show plot
         plt.legend()
         plt.show()
     
@@ -337,5 +371,23 @@ class SolowModelClass:
         
         # c. simulate and plot
         self.simulate(periods=periods, ext=True, do_print=True)
+
+    def convergence_widget(self, alpha=0.33, epsilon=0.17, delta=0.05, s_Y=0.1, s_E=0.01, n=0.01, g=0.02):
+        par = self.par
+        par.s_E = s_E
+        par.alpha = alpha
+        par.delta = delta
+        par.s_Y = s_Y
+        par.n = n
+        par.g = g
+        par.epsilon = epsilon
+
+        # b. checking for error in parameters
+        if par.alpha + par.epsilon > 1:
+            raise ValueError('alpha + epsilon must be less than or equal to 1')
+        
+        # c. simulate and plot
+        self.convergence_plot(ext=True)
+        return
     
     
