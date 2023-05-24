@@ -3,7 +3,6 @@ import numpy as np
 from scipy import optimize
 import sympy as sm
 from types import SimpleNamespace
-from ipywidgets import interact, FloatSlider, IntSlider, Checkbox
 
 np.random.seed(42)
 
