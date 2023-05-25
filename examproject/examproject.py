@@ -324,6 +324,7 @@ class TaxModel:
             sigma (float): elasticity of substitution
             rho (float): risk aversion 
             tau (float): tax rate
+            do_print (bool): whether to print the optimal government spending
 
         returns:
             res.root (float): government spending
@@ -353,6 +354,7 @@ class TaxModel:
             sigma (float): elasticity of substitution
             rho (float): risk aversion        
             tau (float): tax rate
+            do_print (bool): whether to print the utility
 
         returns:
             util (float): utility
@@ -376,7 +378,18 @@ class TaxModel:
         # e. return utility
         return util
     
-    def tax_opt(self, sigma, rho, do_print=False):
+    def optimal_tax_ext(self, sigma, rho, do_print=False):
+        """
+        Solves for the socially optimal tax rate.
+
+        arguments:
+            sigma (float): elasticity of substitution
+            rho (float): risk aversion
+            do_print (bool): if True, prints the optimal tax rate
+
+        returns:
+            sol.tau_ext (float): optimal tax rate
+        """
 
         # a. call parmeter values
         sol = self.sol
