@@ -420,7 +420,43 @@ class TaxModel:
         # e. return the optimal tax rate
         return sol.tau_ext
 
+# functions for problem 2
+class LabourClass:
+    def __init__(self):
+        self.par = SimpleNamespace()
+    def set_values(self):
+        par = self.par
 
+        par.eta = 0.5
+        par.w = 1.0
+        par.rho = 0.90
+        par.iota = 0.01
+        par.sigma = 0.10
+        par.R = (1+0.01)**(1/12)
+        par.T = 120
+
+    def demand(self, kappa, y):
+        par = self.par
+        return (kappa * y ** par.eta)
+
+    def profit_fun(self, kappa, l):
+        par = self.par
+        return kappa * l ** (1-par.eta) - par.w * l
+    
+    def optimal_l(self, kappa):
+        par = self.par
+        
+        obj = lambda l: - self.profit_fun(kappa=kappa, l=l)
+
+        # solve for the optimal labor supply using BFSG minimization
+        res = optimize.minimize(fun=obj, x0=0.5, method = 'BFGS')
+
+        return res.x[0]
+    
+    def analytical_l(self, kappa):
+        par = self.par
+        return ((1-par.eta) * kappa / par.w) ** (1/par.eta)
+    
 
 # functions for problem 3
 def griewank(x):
