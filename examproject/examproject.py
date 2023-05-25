@@ -5,17 +5,6 @@ import sympy as sm
 from IPython.display import display
 from types import SimpleNamespace
 
-from IPython.core.display import HTML
-
-HTML("""
-<style>
- {
-    display: table-cell;
-    text-align: center;
-   .output_png vertical-align: middle;
-}
-</style>
-""")
 
 
 # functions for problem 1
@@ -423,10 +412,33 @@ class TaxModel:
 # functions for problem 2
 class LabourClass:
     def __init__(self):
+        """
+        initializes the class
+
+        arguments:
+            None
+
+        returns:
+            None
+        """
+
         self.par = SimpleNamespace()
+
     def set_values(self):
+        """
+        sets the parameter values
+
+        arguments:
+            None
+
+        returns:
+            None
+        """
+
+        # a. call parmeter values
         par = self.par
 
+        # b. set parameter values
         par.eta = 0.5
         par.w = 1.0
         par.rho = 0.90
@@ -434,29 +446,93 @@ class LabourClass:
         par.sigma = 0.10
         par.R = (1+0.01)**(1/12)
         par.T = 120
-
-    def demand(self, kappa, y):
-        par = self.par
-        return (kappa * y ** par.eta)
-
-    def profit_fun(self, kappa, l):
-        par = self.par
-        return kappa * l ** (1-par.eta) - par.w * l
+        par.K = 5000
     
-    def optimal_l(self, kappa):
-        par = self.par
-        
-        obj = lambda l: - self.profit_fun(kappa=kappa, l=l)
+    def numerical_l(self, kappa, do_print=False):
+        """
+        Calculates the optimal number of hairdressers for a given kappa.
 
-        # solve for the optimal labor supply using BFSG minimization
+        arguments:
+            kappa (float): the value of the shock
+
+        returns:
+            res.x[0] (float): optimal amount of hairdressers
+        """
+
+        # a. call parmeter values
+        par = self.par
+
+        # b. setup the objective function        
+        obj = lambda l: kappa * l ** (1-par.eta) - par.w * l
+
+        # c. solve for the optimal number of hairdressers using BFSG minimization
         res = optimize.minimize(fun=obj, x0=0.5, method = 'BFGS')
 
+        # d. print optimal number of hairdressers if do_print is True
+        if do_print:
+            print(f'The optimal number of hairdressers is {res.x[0]:.4f}.')
+
+        # e. return the optimal number of hairdressers
         return res.x[0]
     
-    def analytical_l(self, kappa):
+    def analytical_l(self, kappa, do_print=False):
+        """
+        Calculates the optimal number of hairdressers for a given kappa.
+
+        arguments:
+            kappa (float): the value of the shock
+            
+        returns:
+            l (float): optimal amount of hairdressers
+        """
+
+        # a. call parmeter values
         par = self.par
-        return ((1-par.eta) * kappa / par.w) ** (1/par.eta)
+
+        # b. calculate optimal number of hairdressers and return
+        l = ((1-par.eta) * kappa / par.w) ** (1/par.eta)
+
+        # c. print optimal number of hairdressers if do_print is True
+        if do_print:
+            print(f'The optimal number of hairdressers is {l:.4f}.')
+
+        return l 
     
+    def plot_l(self, include_analytical=False):
+        """
+        Plots the optimal number of hairdressers for different values of kappa.
+
+        arguments:
+            include_analytical (bool): if True, includes the analytical solution
+
+        returns:
+            None
+        """
+
+        # a. call parmeter values
+        par = self.par
+
+        # b. setup the grid
+        kappa_grid = np.linspace(0.01, 1.0, 100)
+
+        # c. setup the figure
+        fig = plt.figure()
+        ax = fig.add_subplot(1,1,1)
+
+        # d. plot the optimal number of hairdressers
+        ax.plot(kappa_grid, [self.numerical_l(kappa) for kappa in kappa_grid], label='Numerical solution')
+
+        # e. plot the analytical solution if include_analytical is True
+        if include_analytical:
+            ax.plot(kappa_grid, [self.analytical_l(kappa) for kappa in kappa_grid], label='Analytical solution')
+
+        # f. set labels and legend
+        ax.set_xlabel(r'$\kappa$')
+        ax.set_ylabel(r'$l$')
+        ax.legend()
+
+        # g. show the figure
+        plt.show()
 
 # functions for problem 3
 def griewank(x):
