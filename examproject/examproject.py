@@ -185,6 +185,15 @@ class TaxModel:
         return np.log(self.consump_fun(tau=tau)**par.alpha * self.govern_fun(tau=tau)**(1-par.alpha)) - par.nu * (self.labour_fun(tau=tau)**2)/2
         
     def tax_plot(self):
+        """
+        Plots labour supply, government spending, and utility as a function of the tax rate.
+
+        arguments:
+            none
+
+        returns:
+            plot of labour supply, government spending, and utility as a function of the tax rate
+        """
 
         # a. call parmeter values
         par = self.par
@@ -201,27 +210,148 @@ class TaxModel:
         fig = plt.figure(figsize=(12, 8))
         fig.suptitle('Labor Supply, Government Consumption, and Worker Utility as Functions of the Tax Rate', fontsize = 15)
 
-        # create subplots
+        # e. create subplots for labour supply, government spending, and utility
+        # i. labour supply
         plt.subplot(3, 1, 1)
         plt.plot(tau, labour, label='Labor Supply (L)')
-        #plt.xlabel('Tax Rate ' +r'$\tau$', fontsize = 10)
         plt.ylabel(r'Labor Supply (L)', size = 10)
         plt.legend(fontsize = 10, loc = 'lower center')
 
+        # ii. government spending
         plt.subplot(3, 1, 2)
         plt.plot(tau, gover, label='Government Consumption (G)', color = 'red')
-        #plt.xlabel('Tax Rate ' +r'$\tau$', fontsize = 10)
         plt.ylabel(r'Government Consumption (G)', size = 10)
         plt.legend(fontsize = 10, loc = 'lower center')
 
+        # iii. utility
         plt.subplot(3, 1, 3)
         plt.plot(tau, util, label='Worker Utility (V)', color = 'green')
         plt.xlabel('Tax Rate ' +r'$\tau$', fontsize = 10)
         plt.ylabel(r'Worker Utility (V)', size = 10)
         plt.legend(fontsize = 10, loc = 'lower center')
 
+        # f. adjust layout and show plot
         plt.tight_layout()
         plt.show()
+
+    def optimal_tax(self, do_print=False, do_plot=False):
+        """
+        Calculates the optimal tax rate.
+
+        arguments:
+            do_print (bool): whether to print the optimal tax rate
+            do_plot (bool): whether to plot utility as a function of the tax rate
+
+        returns:
+            sol.tau (float): the optimal tax rate
+        """
+
+        # a. call solution namespace
+        sol = self.sol
+
+        # b. define objective function
+        obj = lambda tau: -self.util_fun(tau=tau)
+
+        # c. solve for the optimal tax rate using Nelder-Mead minimization
+        sol.tau = optimize.minimize(obj, x0=0.5, method = 'BFGS').x[0]
+        
+        # d. print optimal tax rate if do_print is True
+        if do_print:
+            print(f'The optimal tax rate is {sol.tau:.4f}.')
+
+        # e. plot utility as a function of the tax rate if do_plot is True
+        if do_plot:
+            # i. define array of tau values
+            tau = np.linspace(0, 1, 500)
+
+            # ii. call utility function
+            util = self.util_fun(tau=tau)
+
+            # iii. plot utility as a function of tau
+            fig = plt.figure(figsize=(12, 8))
+            ax = fig.add_subplot(1,1,1)
+            ax.set_title('Worker Utility as a Function of the Tax Rate', fontsize = 15)
+            ax.axvline(x = sol.tau, color = "black", linestyle = '--', label = r'Optimal Tax Rate $\tau =$'+f'{sol.tau:.4f}')
+            ax.plot(tau, util, label='Worker Utility (V)', color = 'green')
+            plt.xlabel('Tax Rate ' +r'$\tau$', fontsize = 10)
+            plt.ylabel(r'Worker Utility (V)', size = 10)
+            ax.legend(fontsize = 10)
+
+            # iv. adjust layout and show plot
+            plt.tight_layout()
+            plt.show()
+
+        # f. return the optimal tax rate
+        return sol.tau
+    
+    def worker_opt(self, sigma, rho, tau, G, do_print=False):
+        """
+        Solves the worker's problem for a given tax rate and government spending.
+
+        arguments:
+            tau (float): tax rate
+            G (float): government spending
+
+        returns:
+            res.x[0] (float): optimal labor supply
+        """
+
+        # a. call parmeter values
+        par = self.par
+
+        # b. setup the objective function
+        obj = lambda L: - ((((par.alpha*(par.kappa + (1-tau) * par.w * L)**((sigma-1)/sigma) 
+                            + (1-par.alpha)*G**((sigma-1)/sigma))**(sigma/(sigma-1)))**(1-rho) - 1) 
+                            / (1-rho) - par.nu * L**(1+par.epsilon) / (1+par.epsilon))
+
+        # c. solve for the optimal labor supply using BFSG minimization
+        res = optimize.minimize(obj, x0=12, bounds=[(0,24)], method = 'Nelder-Mead')
+
+        # d. print optimal labor supply if do_print is True
+        if do_print:
+            print(f'The optimal labor supply is {res.x[0]:.4f}.')
+
+        # e. return the optimal labor supply
+        return res.x[0]
+
+    def gov_opt(self, sigma, rho, tau, do_print=False):
+        """
+        Solves the government's problem for a given tax rate.
+
+        arguments:
+            tau (float): tax rate
+
+        returns:
+            res.root (float): government spending
+        """
+        
+        # a. call parmeter values
+        par = self.par
+
+        # b. setup the objective function
+        obj = lambda G: G - tau * par.w * self.worker_opt(sigma=sigma, rho=rho, tau=tau, G=G)
+        
+        # c. solve for the optimal labor supply using brentq root scalar
+        res = optimize.root_scalar(obj, bracket=(0,24), method = 'brentq')
+
+        # d. print optimal labor supply if do_print is True
+        if do_print:
+            print(f'The optimal government spending is {res.root:.4f}.')
+
+        # e. return the optimal labor supply
+        return res.root
+
+    def util_fun_ext(self, sigma, rho, tau):
+        """
+        Calculates the utility for a given tax rate.
+
+        arguments:
+            tau (float): tax rate
+
+        returns:
+            util (float): utility
+        """
+        G_opt = self.gov_opt(sigma)
 
 
 # functions for problem 3
