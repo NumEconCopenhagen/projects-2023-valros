@@ -38,7 +38,6 @@ def analytical_sol(do_print = False):
         display(sm.Eq(Lstar, sol))
     return sol, sol_expanded
 
-
 class TaxModel:
     def __init__(self):
         """ 
