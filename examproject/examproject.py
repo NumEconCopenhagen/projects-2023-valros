@@ -116,7 +116,7 @@ class TaxModel:
         ax.set_title(r'Labour supply as a function of $\widetilde{w}$')
         plt.show()
 
-    def labour_fun(self):
+    def labour_fun(self,tau):
         """
         Calculates the labour supply.
 
@@ -129,22 +129,11 @@ class TaxModel:
 
         # a. call parmeter values and necessary symbols
         par = self.par
-        alpha = sm.symbols('alpha', positive=True)
-        kappa = sm.symbols('kappa', positive=True)
-        w = sm.symbols('w', positive=True)
-        nu = sm.symbols('nu', positive=True)
-        tau = sm.symbols('tau', positive=True)
 
-        # b. call analytical_sol function and extract solution as a function of w and tau
-        sol = analytical_sol()[1]
-
-        # c. define function for labour supply
-        L_func = sm.lambdify((alpha, nu, kappa, w, tau), sol)
-
-        # d. calculate labour supply and return
-        return L_func(alpha=par.alpha, kappa=par.kappa, nu=par.nu, w=par.w, tau=par.tau)
+        # b. calculate labour supply and return
+        return (-par.kappa + np.sqrt(par.kappa**2 + 4 * (par.alpha/par.nu) * (par.w * (1-tau))**2)) / (2 * par.w * (1-tau))
     
-    def govern_fun(self):
+    def govern_fun(self,tau):
         """
         Calculates the government spending.
 
@@ -159,9 +148,9 @@ class TaxModel:
         par = self.par
 
         # b. calculate government spending and return
-        return par.alpha * par.w * self.labour_fun()
+        return tau * par.alpha * par.w * self.labour_fun(tau=tau)
     
-    def consump_fun(self):
+    def consump_fun(self, tau):
         """
         Calculates the consumption.
 
@@ -176,9 +165,9 @@ class TaxModel:
         par = self.par
 
         # b. calculate consumption and return
-        return par.kappa + (1-par.tau) * par.w * self.labour_fun(alpha=par.alpha, nu=par.nu, kappa=par.kappa, w=par.w, tau=par.tau)
+        return par.kappa + (1-tau) * par.w * self.labour_fun(tau=tau)
     
-    def util_fun(self):
+    def util_fun(self, tau):
         """
         Calculates the utility.
 
@@ -193,7 +182,7 @@ class TaxModel:
         par = self.par
 
         # b. calculate utility and return
-        return np.log(self.consump_fun(w=par.w, tau=par.tau, kappa=par.kappa, alpha=par.alpha, nu=par.nu)**par.alpha * self.govern_fun(w=par.w, tau=par.tau, alpha=par.alpha, nu=par.nu, kappa=par.kappa)**(1-par.alpha)) - par.nu * (self.labour_fun(alpha=par.alpha, nu=par.nu, kappa=par.kappa, w=par.w, tau=par.tau)**2)/2
+        return np.log(self.consump_fun(tau=tau)**par.alpha * self.govern_fun(tau=tau)**(1-par.alpha)) - par.nu * (self.labour_fun(tau=tau)**2)/2
         
     def tax_plot(self):
 
@@ -201,32 +190,32 @@ class TaxModel:
         par = self.par
 
         # b. define array of tau values
-        par.tau = np.linspace(0, 1, 100)
+        tau = np.linspace(0, 1, 500)
 
         # c. call labour, government spending, and utility functions
-        labour = self.labour_fun()
-        gover = self.govern_fun()
-        util = self.util_fun()
+        labour = self.labour_fun(tau=tau)
+        gover = self.govern_fun(tau=tau)
+        util = self.util_fun(tau=tau)
 
         # d. plot labour supply, government spending, and utility as a function of tau
-        fig = plt.figure()
+        fig = plt.figure(figsize=(12, 8))
         fig.suptitle('Labor Supply, Government Consumption, and Worker Utility as Functions of the Tax Rate', fontsize = 15)
 
         # create subplots
         plt.subplot(3, 1, 1)
-        plt.plot(par.tau, labour, label='Labor Supply (L)')
+        plt.plot(tau, labour, label='Labor Supply (L)')
         #plt.xlabel('Tax Rate ' +r'$\tau$', fontsize = 10)
         plt.ylabel(r'Labor Supply (L)', size = 10)
         plt.legend(fontsize = 10, loc = 'lower center')
 
         plt.subplot(3, 1, 2)
-        plt.plot(tau_vec, gov_vec, label='Government Consumption (G)', color = 'red')
+        plt.plot(tau, gover, label='Government Consumption (G)', color = 'red')
         #plt.xlabel('Tax Rate ' +r'$\tau$', fontsize = 10)
         plt.ylabel(r'Government Consumption (G)', size = 10)
         plt.legend(fontsize = 10, loc = 'lower center')
 
         plt.subplot(3, 1, 3)
-        plt.plot(tau_vec, util_vec, label='Worker Utility (V)', color = 'green')
+        plt.plot(tau, util, label='Worker Utility (V)', color = 'green')
         plt.xlabel('Tax Rate ' +r'$\tau$', fontsize = 10)
         plt.ylabel(r'Worker Utility (V)', size = 10)
         plt.legend(fontsize = 10, loc = 'lower center')
