@@ -121,7 +121,7 @@ class TaxModel:
         Calculates the labour supply.
 
         arguments:
-            none
+            tau (float): tax rate
 
         returns:
             labour supply
@@ -138,7 +138,7 @@ class TaxModel:
         Calculates the government spending.
 
         arguments:
-            none
+            tau (float): tax rate
 
         returns:
             government spending
@@ -155,7 +155,7 @@ class TaxModel:
         Calculates the consumption.
 
         arguments:
-            none
+            tau (float): tax rate
 
         returns:
             consumption
@@ -172,7 +172,7 @@ class TaxModel:
         Calculates the utility.
 
         arguments:
-            none
+            tau (float): tax rate
 
         returns:
             utility
@@ -293,6 +293,7 @@ class TaxModel:
             rho (float): risk aversion 
             tau (float): tax rate
             G (float): government spending
+            do_print (bool): whether to print the optimal labor supply
 
         returns:
             res.x[0] (float): optimal labor supply
