@@ -5,6 +5,19 @@ import sympy as sm
 from IPython.display import display
 from types import SimpleNamespace
 
+from IPython.core.display import HTML
+
+HTML("""
+<style>
+ {
+    display: table-cell;
+    text-align: center;
+   .output_png vertical-align: middle;
+}
+</style>
+""")
+
+
 # functions for problem 1
 def analytical_sol(do_print = False):
 
