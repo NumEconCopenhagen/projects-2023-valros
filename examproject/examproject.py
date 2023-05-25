@@ -284,11 +284,13 @@ class TaxModel:
         # f. return the optimal tax rate
         return sol.tau
     
-    def worker_opt(self, sigma, rho, tau, G, do_print=False):
+    def labour_opt(self, sigma, rho, tau, G, do_print=False):
         """
-        Solves the worker's problem for a given tax rate and government spending.
+        Solves the worker's labour problem for a given tax rate and government spending.
 
         arguments:
+            sigma (float): elasticity of substitution
+            rho (float): risk aversion 
             tau (float): tax rate
             G (float): government spending
 
@@ -319,6 +321,8 @@ class TaxModel:
         Solves the government's problem for a given tax rate.
 
         arguments:
+            sigma (float): elasticity of substitution
+            rho (float): risk aversion 
             tau (float): tax rate
 
         returns:
@@ -329,7 +333,7 @@ class TaxModel:
         par = self.par
 
         # b. setup the objective function
-        obj = lambda G: G - tau * par.w * self.worker_opt(sigma=sigma, rho=rho, tau=tau, G=G)
+        obj = lambda G: G - tau * par.w * self.labour_opt(sigma=sigma, rho=rho, tau=tau, G=G)
         
         # c. solve for the optimal labor supply using brentq root scalar
         res = optimize.root_scalar(obj, bracket=(0,24), method = 'brentq')
@@ -341,17 +345,55 @@ class TaxModel:
         # e. return the optimal labor supply
         return res.root
 
-    def util_fun_ext(self, sigma, rho, tau):
+    def util_ext_fun(self, sigma, rho, tau, do_print=False):
         """
         Calculates the utility for a given tax rate.
 
         arguments:
+            sigma (float): elasticity of substitution
+            rho (float): risk aversion        
             tau (float): tax rate
 
         returns:
             util (float): utility
         """
-        G_opt = self.gov_opt(sigma)
+        # a. call parmeter values
+        par = self.par
+
+        # b. calculate government spending and optimal labor supply
+        G_opt = self.gov_opt(sigma=sigma, rho=rho, tau=tau)
+        L_opt = self.labour_opt(sigma=sigma, rho=rho, tau=tau, G=G_opt)
+
+        # c. calculate utility
+        util = ((((par.alpha * (par.kappa + (1 - tau) * par.w * L_opt) ** ((sigma - 1) / sigma) 
+                   + (1 - par.alpha) * G_opt ** ((sigma - 1) / sigma)) ** (sigma / (sigma - 1))) ** (1 - rho) - 1) / (1 - rho) 
+                   - par.nu * L_opt ** (1 + par.epsilon) / (1 + par.epsilon))
+        
+        # d. print utility if do_print is True
+        if do_print:
+            print(f'The utility is {util:.4f}.')
+        
+        # e. return utility
+        return util
+    
+    def tax_opt(self, sigma, rho, do_print=False):
+
+        # a. call parmeter values
+        sol = self.sol
+
+        # b. setup the objective function
+        obj = lambda tau: - self.util_ext_fun(sigma=sigma, rho=rho, tau=tau)
+
+        # c. solve for the optimal tax rate using BFSG minimization
+        sol.tau_ext = optimize.minimize(obj, x0=0.5, bounds=[(0,1)], method = 'Nelder-Mead').x[0]
+
+        # d. print optimal tax rate if do_print is True
+        if do_print:
+            print(f'The optimal tax rate is {sol.tau_ext:.4f}.')
+        
+        # e. return the optimal tax rate
+        return sol.tau_ext
+
 
 
 # functions for problem 3
