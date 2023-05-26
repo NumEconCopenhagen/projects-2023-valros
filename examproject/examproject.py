@@ -4,8 +4,7 @@ import matplotlib.pyplot as plt
 import sympy as sm
 from IPython.display import display
 from types import SimpleNamespace
-
-
+import numba as nb
 
 # functions for problem 1
 def analytical_sol(do_print = False):
@@ -410,7 +409,7 @@ class TaxModel:
         return sol.tau_ext
 
 # functions for problem 2
-class LabourClass:
+class LabourModel:
     def __init__(self):
         """
         initializes the class
@@ -423,6 +422,7 @@ class LabourClass:
         """
 
         self.par = SimpleNamespace()
+        self.sol = SimpleNamespace()
 
     def set_values(self):
         """
@@ -437,8 +437,9 @@ class LabourClass:
 
         # a. call parmeter values
         par = self.par
+        sol = self.sol
 
-        # b. set parameter values
+        # c. set parameter values
         par.eta = 0.5
         par.w = 1.0
         par.rho = 0.90
@@ -446,8 +447,22 @@ class LabourClass:
         par.sigma = 0.10
         par.R = (1+0.01)**(1/12)
         par.T = 120
-        par.K = 5000
-    
+        par.K = 10000
+        
+        # d. initialize empty arrays for kappa, iota, the single period, and labour value 
+        sol.log_kappa = np.zeros((par.K, par.T+1))
+        sol.kappa = np.zeros((par.K, par.T+1))
+        sol.iota = np.zeros((par.K, par.T+1))
+        sol.single_period = np.zeros((par.K, par.T+1))
+
+        # e. dertermine shocks for the entire period and calculate kappa
+        np.random.seed(2023)
+        sol.eps = np.random.normal(-0.5*par.sigma**2, par.sigma, (par.K, par.T))
+
+        for t in range(1,par.T+1): # as kappa is 1 in period t=0, we only need to calculate it for t=1,2,...,T+1
+            sol.log_kappa[:,t] = par.rho * sol.log_kappa[:,t-1] + sol.eps[:,t-1]
+        sol.kappa = np.exp(sol.log_kappa)
+
     def numerical_l(self, kappa, do_print=False):
         """
         Calculates the optimal number of hairdressers for a given kappa.
@@ -463,7 +478,7 @@ class LabourClass:
         par = self.par
 
         # b. setup the objective function        
-        obj = lambda l: kappa * l ** (1-par.eta) - par.w * l
+        obj = lambda l: - (kappa * l ** (1-par.eta) - par.w * l)
 
         # c. solve for the optimal number of hairdressers using BFSG minimization
         res = optimize.minimize(fun=obj, x0=0.5, method = 'BFGS')
@@ -498,7 +513,7 @@ class LabourClass:
 
         return l 
     
-    def plot_l(self, include_analytical=False):
+    def plot_l(self, kappa=(1.0, 2.0)):
         """
         Plots the optimal number of hairdressers for different values of kappa.
 
@@ -509,32 +524,92 @@ class LabourClass:
             None
         """
 
-        # a. call parmeter values
-        par = self.par
+        # a. setup the grid
+        kappa_grid = np.linspace(kappa[0],kappa[1], 100)
 
-        # b. setup the grid
-        kappa_grid = np.linspace(0.01, 1.0, 100)
-
-        # c. setup the figure
+        # b. setup the figure
         fig = plt.figure()
         ax = fig.add_subplot(1,1,1)
 
-        # d. plot the optimal number of hairdressers
+        # c. plot the optimal number of hairdressers
         ax.plot(kappa_grid, [self.numerical_l(kappa) for kappa in kappa_grid], label='Numerical solution')
+        ax.plot(kappa_grid, [self.analytical_l(kappa) for kappa in kappa_grid], linestyle='--', alpha=0.75, label='Analytical solution')
 
-        # e. plot the analytical solution if include_analytical is True
-        if include_analytical:
-            ax.plot(kappa_grid, [self.analytical_l(kappa) for kappa in kappa_grid], label='Analytical solution')
-
-        # f. set labels and legend
+        # d. set labels and legend
         ax.set_xlabel(r'$\kappa$')
         ax.set_ylabel(r'$l$')
         ax.legend()
+        ax.set_title('Optimal number of hairdressers for different values of $\kappa$')
 
-        # g. show the figure
+        # e. show the figure
         plt.show()
+    
+    @nb.jit(parallel=True, forceobj=True)
+    def policy(self, Delta=0):
+        """
+        Calculates the optimal policy for a given kappa.
+
+        arguments:
+            Delta (float): the maximum difference between the optimal number of hairdressers in two consecutive periods
+
+        returns:
+            l (float): optimal amount of hairdressers
+        """
+
+        # a. call parmeter values
+        par = self.par
+        sol = self.sol
+
+        labour = np.zeros((par.K,par.T+1))
+
+        for t in range(1, par.T+1):
+            labour[:,t] = ((par.eta*sol.kappa[:,t])/par.w)**(1/(1-par.eta)) 
+
+        if Delta != 0:
+            for t in range(1, par.T+1):
+                for k in range(0,par.K):
+                    if np.abs(labour[k,t-1] - labour[k,t]) <= Delta:
+                        labour[k,t] = labour[k,t-1]
+
+
+        return labour
+
+    @nb.jit(parallel=True, forceobj=True)
+    def ex_ante(self, labour):
+        """
+        Calculates the ex ante value of the hairsalon.
+
+        arguments:
+            none
+
+        returns:
+            V (float): the ex ante value of the hairsalon
+        """
+
+        # a. call parmeter values
+        par = self.par
+        sol = self.sol
+
+        # e. calculate cost of changing the number of hairdressers
+        for k in range(0,par.K):
+            for t in range(0,par.T+1):
+                if labour[k,t] != labour[k,t-1]:
+                    sol.iota[k,t] = par.iota
+
+        # f. calculate the single period value
+        for t in range(1, par.T+1):
+            sol.single_period[:,t] = par.R**(-t) * (sol.kappa[:,t]*labour[:,t]**(1-par.eta)-par.w*labour[:,t]-sol.iota[:,t])
+
+        # g. calculate the ex ante value
+        ex_post = np.sum(sol.single_period, axis=1)
+        sol.V = np.mean(ex_post)
+
+        return sol.V
+
 
 # functions for problem 3
+
+@nb.njit(parallel=True)
 def griewank(x):
     """
     Returns the value of the Griewank function for a given array x.
@@ -547,7 +622,8 @@ def griewank(x):
     """
 
     return griewank_(x[0],x[1])
-    
+
+@nb.njit(parallel=True)
 def griewank_(x1,x2):
     """
     Griewank function for a given x1 and x2.
@@ -557,7 +633,7 @@ def griewank_(x1,x2):
         x2 (float): the second value
 
     returns:
-        float: the value of the function
+         value of the function
     """
 
     A = x1**2/4000 + x2**2/4000
@@ -611,4 +687,3 @@ def griewank_minimizer(brackets = [-600,600], tau = 10**(-8), warm_up_K = 10, K 
                       f'Iterations: {k}')
             # 4. return x_star as x_star and k as number of iterations as a dictionary
             return {'sol':x_star, 'iter':k, 'value':value}
-
