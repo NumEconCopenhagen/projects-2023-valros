@@ -7,6 +7,8 @@ from scipy import optimize
 import pandas as pd 
 import matplotlib.pyplot as plt
 
+from numba import njit
+
 class HouseholdSpecializationModelClass:
 
     def __init__(self):
@@ -256,6 +258,7 @@ class HouseholdSpecializationModelClass:
         A = np.vstack([np.ones(x.size),x]).T
         opt.beta0,opt.beta1 = np.linalg.lstsq(A,y,rcond=None)[0]
     
+
     def estimate(self,mode='normal',do_print=False):
         """ 
         estimating optimal parameter values given the mode. 
@@ -370,3 +373,181 @@ class HouseholdSpecializationModelClass:
 
         else:
             print('Mode not recognized. Available modes are: normal (default), extended and only_sigma')
+
+
+### Plot Functions ###
+
+## Question 1
+
+def plot_heat_map(ratio_results, alpha_range, sigma_range):
+    '''
+    This function plots the results from the heat map.
+    
+    arguments:
+        ratio_results: array, the results from the heat map
+        alpha_range: array, the range of alpha values
+        sigma_range: array, the range of sigma values
+    
+    '''
+    
+    # d. plot results in heatmap
+    fig = plt.figure()
+    ax = fig.add_subplot(1,1,1)
+    im = ax.imshow(ratio_results, cmap='coolwarm')
+
+    # e. create colorbar
+    cbar = ax.figure.colorbar(im, ax=ax)
+    cbar.ax.set_ylabel(r'$H_F/H_M$', rotation=270, labelpad=10)
+
+    # f. set title and labels
+    plt.title("Ratio between" + " " + r'$H_F$' + " " + "and" + " " r'$H_M$')
+    ax.set_xticks(np.arange(len(sigma_range)))
+    ax.set_yticks(np.arange(len(alpha_range)))
+    ax.set_xticklabels(sigma_range)
+    ax.set_yticklabels(alpha_range)
+    ax.set_xlabel(r'$\sigma$')
+    ax.set_ylabel(r'$\alpha$')
+
+    # g. looping over data to create annotations
+    for i in range(len(alpha_range)):
+        for j in range(len(sigma_range)):
+            text = ax.text(j, i, r'$\frac{H_F}{H_M}=$'+f"{ratio_results[i, j]:.2f}",
+                        ha="center", va="center", color="black")
+
+    # h. show plot
+    plt.show()
+
+## Question 2
+
+def plot_data_points(logwFwM_ratio, logHFHM_ratio):
+    '''
+    plots a heat map of the log(wF/wM) and log(HF/HM) ratios
+    
+    arguments:
+        logwFwM_ratio: list of log(wF/wM) ratios
+        logHFHM_ratio: list of log(HF/HM) ratios
+    
+    '''
+    
+    # c. plot results in a plot
+    plt.plot(logwFwM_ratio, logHFHM_ratio, 
+            marker = 'o', 
+            linestyle = '--', 
+            label="Estimated discretly")
+
+    # d. set title and labels
+    plt.title(r'$\log(\frac{H_F}{H_M})$' + " against " r'$\log(\frac{w_F}{w_M})$' + " solved discretely")
+    plt.legend(loc='upper right')
+    plt.xlabel(r'$\log(\frac{w_F}{w_M})$')
+    plt.ylabel(r'$\log(\frac{H_F}{H_M})$')
+
+    # e. looping over data to create annotations
+    for i in range(5):
+        plt.annotate(f"({logwFwM_ratio[i]:.2f}, {logHFHM_ratio[i]:.2f})", (logwFwM_ratio[i]+0.005, logHFHM_ratio[i]+0.005))
+
+    # f. show plot
+    plt.show()
+    
+## Question 3
+
+def plot_continious(logwFwM_ratio, logHFHM_ratio_continous):
+    '''
+    plots a heat map of the log(wF/wM) and log(HF/HM) ratios
+    
+    arguments:
+        logwFwM_ratio: list of log(wF/wM) ratios
+        logHFHM_ratio_continous: list of log(HF/HM) ratios solved continously
+    
+    '''
+    
+    # c. plot results in a plot
+    plt.plot(logwFwM_ratio, logHFHM_ratio_continous, 
+            marker = 'o', 
+            linestyle = '--', 
+            label="Estimated continously")
+
+    # d. set title and labels
+    plt.title(r'$\log(\frac{H_F}{H_M})$' + " against " r'$\log(\frac{w_F}{w_M})$' + " solved continously")
+    plt.legend(loc='upper right')
+    plt.xlabel(r'$\log(\frac{w_F}{w_M})$')
+    plt.ylabel(r'$\log(\frac{H_F}{H_M})$')
+
+    # e. looping over data to create annotations
+    for i in range(5):
+        plt.annotate(f"({logwFwM_ratio[i]:.2f}, {logHFHM_ratio_continous[i]:.2f})", (logwFwM_ratio[i]+0.001, logHFHM_ratio_continous[i]+0.0005))
+
+    # f. show plot
+    plt.show()
+    
+
+## Question 4
+
+def plot_siminski(logwFwM_ratio, logHFHM_ratio_continous, x, y, model):
+    '''
+    plots a graph for siminski and yetsenga (2022) and the estimated model
+    
+    arguments:
+        logwFwM_ratio: list of log(wF/wM) ratios
+        logHFHM_ratio_continous: list of log(HF/HM) ratios solved continously
+        x: list of x values for siminski and yetsenga (2022)
+        y: list of y values for siminski and yetsenga (2022)
+        model: model object
+    
+    '''
+    
+    
+    plt.plot(x, y, color = 'red', linestyle = '-', label='Siminski and Yetsenga (2022)')
+    plt.plot(logwFwM_ratio, logHFHM_ratio_continous, 
+            marker = 'o', 
+            linestyle = '--', 
+            label = 'Estimated with '+ r'$\alpha=$' f'{model.opt.alpha:.2f}'+ " and " + r'$\sigma=$' f'{model.opt.sigma:.2f}')
+
+    plt.legend(loc='upper right')
+
+    # g. set title and labels
+    plt.title(r'$\log(\frac{H_F}{H_M})$' + " against " r'$\log(\frac{w_F}{w_M})$' + " with " + r'$\alpha=$' f'{model.opt.alpha:.2f}'+ " and " + r'$\sigma=$' f'{model.opt.sigma:.2f}')
+    plt.xlabel(r'$\log(\frac{w_F}{w_M})$')
+    plt.ylabel(r'$\log(\frac{H_F}{H_M})$')
+
+    # h. looping over data to create annotations
+    for i in range(5):
+        plt.annotate(f"({logwFwM_ratio[i]:.2f}, {logHFHM_ratio_continous[i]:.2f})", (logwFwM_ratio[i]+0.001, logHFHM_ratio_continous[i]+0.0005))
+
+    # i. show plot
+    plt.show()
+    
+## Question 5
+
+def plot_all_three(logwFwM_ratio, logHFHM_ratio_baseline, logHFHM_ratio_extended, x, y, model, extended_model):
+    ''''
+    plots a graph of the baseline model, the extended model and the Siminski and Yetsenga (2022) data
+    
+    arguments:
+        logwFwM_ratio: list of log(wF/wM) ratios
+        logHFHM_ratio_baseline: list of log(HF/HM) ratios solved with the baseline model
+        logHFHM_ratio_extended: list of log(HF/HM) ratios solved with the extended model
+        x: list of log(wF/wM) ratios
+        y: list of log(HF/HM) ratios from Siminski and Yetsenga (2022)
+        model: baseline model
+        extended_model: extended model
+    
+    '''
+    
+    plt.plot(x, y, color='red', linestyle='-', label='Siminski and Yetsenga (2022)')
+    plt.plot(logwFwM_ratio, logHFHM_ratio_baseline, 
+            marker='o', 
+            linestyle='--', 
+            label="Baseline Model: " + r'$\sigma=$' f'{model.par.sigma:.2f}')
+    plt.plot(logwFwM_ratio, logHFHM_ratio_extended, 
+            marker='s', 
+            linestyle='--', 
+            label="Extended Model: " + r'$\sigma=$' f'{extended_model.par.sigma:.2f}'+ ", "+ r'$\epsilon_F=$' f'{extended_model.par.epsilonF:.2f}')
+    plt.legend(loc="best")
+
+    # e. set title and labels
+    plt.title(r'$\log(\frac{H_F}{H_M})$' + " against " r'$\log(\frac{w_F}{w_M})$' + " with " + r'$\alpha=$' f'{model.par.alpha:.2f}')
+    plt.xlabel(r'$\log(\frac{w_F}{w_M})$')
+    plt.ylabel(r'$\log(\frac{H_F}{H_M})$')
+
+    # f. show plot
+    plt.show()
