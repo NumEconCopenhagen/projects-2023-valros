@@ -7,3 +7,8 @@ The **results** of the project can be seen from running [examproject.ipynb](exam
 **Dependencies:** The following instalations are required to run the code:
 - ```scipy```
 - ```numpy```
+- ```matplotlib```
+- ```numba```
+- ```sympy```
+- ```SimpleNamespace```
+- ```IPython```

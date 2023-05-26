@@ -564,7 +564,7 @@ class HairModel:
 # The following functions are stil part of the solution to problem 2 but are run outside the class to take advantage of numba (we could not get numba.experimental.jitclass to work)
 
 @nb.njit(parallel=True)
-def policy(eta, iota, rho, sigma, K, R, T, w, kappa, Delta=0):
+def policy(eta, iota, rho, sigma, K, R, T, w, kappa, Delta=0, ext=False):
     """
     Calculates the optimal policy for a given kappa.
     Redundant arguments are included to make the function compatible with a dictionary of parameters.
@@ -592,16 +592,21 @@ def policy(eta, iota, rho, sigma, K, R, T, w, kappa, Delta=0):
 
     # b. calculate the labour baseline for each period
     for t in range(1, T+1):
-        labour[:,t] = ((eta*kappa[:,t])/w)**(1/(1-eta)) 
+        labour[:,t] = (((1-eta)*kappa[:,t])/w)**(1/(eta)) 
 
     # c. adjust labour if the difference between two consecutive periods is too large
     for t in range(1, T+1):
         for k in range(0,K):
-            if np.abs(labour[k,t-1] - labour[k,t]) <= Delta:
-                labour[k,t] = labour[k,t-1]
+            if ext:
+                mark = np.abs(labour[k,t] - labour[k,t-1]-0.0025)
+            else:
+                mark = np.abs(labour[k,t] - labour[k,t-1])
+            if mark <= Delta:
+                    labour[k,t] = labour[k,t-1]
 
     # d. return the optimal policy for labour
     return labour
+
 
 @nb.njit(parallel=True)
 def ex_ante(eta, iota, rho, sigma, K, R, T, w, kappa, labour, do_print=False):
@@ -653,7 +658,7 @@ def ex_ante(eta, iota, rho, sigma, K, R, T, w, kappa, labour, do_print=False):
     # f. return the ex ante value
     return V
 
-def optimal_delta(eta, iota, rho, sigma, K, R, T, w, kappa, interval=(0,1), do_print=False):
+def optimal_delta(eta, iota, rho, sigma, K, R, T, w, kappa, interval=(0,1), ext=False, do_print=False):
     """
     Calculates the optimal delta.
 
@@ -679,20 +684,21 @@ def optimal_delta(eta, iota, rho, sigma, K, R, T, w, kappa, interval=(0,1), do_p
     param = {'eta':eta, 'iota':iota, 'rho':rho, 'sigma':sigma, 'K':K, 'R':R, 'T':T, 'w':w}
 
     # b. create objective function for minimization
-    obj = lambda delta: - ex_ante(**param, labour = policy(**param, kappa = kappa, Delta = delta), kappa = kappa)
+    obj = lambda delta: - ex_ante(**param, labour = policy(**param, kappa = kappa, Delta = delta, ext=ext), kappa = kappa)
 
     # c. minimize the objective function
     res = optimize.minimize_scalar(obj, bounds=interval, method='bounded')
 
     # d. print the optimal delta if do_print is True
     if do_print:
-        print(f'The optimal delta is: {res.x}')
+        print(f'The optimal delta is: {res.x}\n'
+              f'The ex ante value of the salon is: {-res.fun}')
 
     # e. return the optimal delta
     return res
 
 @nb.jit(parallel=True, forceobj=True)
-def value_plot(eta, iota, rho, sigma, K, R, T, w, kappa, optimal_delta, interval=(0,1)):
+def value_plot(eta, iota, rho, sigma, K, R, T, w, kappa, optimal_delta, ext=False, interval=(0,1)):
     """
     Plots the expected value of the hairsalon for different delta values.
 
@@ -719,7 +725,7 @@ def value_plot(eta, iota, rho, sigma, K, R, T, w, kappa, optimal_delta, interval
 
     # b. calculate ex ante value for different delta values
     for i in range(0,100):
-        labour = policy(eta, iota, rho, sigma, K, R, T, w, kappa=kappa, Delta=delta[i])
+        labour = policy(eta, iota, rho, sigma, K, R, T, w, kappa=kappa, Delta=delta[i], ext=ext)
         ex_ante_vec[i] = ex_ante(eta, iota, rho, sigma, K, R, T, w, labour = labour, kappa = kappa)
         
     # c. setup the figure and plot the ex ante value
