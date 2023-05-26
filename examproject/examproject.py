@@ -798,7 +798,7 @@ def griewank_minimizer(brackets = [-600,600], tau = 10**(-8), warm_up_K = 10, K 
             # d. update x
             x[k] = chi_k*x[k] + (1-chi_k)*x_star
         # e. minimize using the scipy.optimize.minimize with BFGS method
-        x_opt = optimize.minimize(fun=griewank, x0=x[k], method = 'BFGS').x
+        x_opt = optimize.minimize(fun=griewank, x0=x[k], method = 'BFGS', tol = tau).x
         # f. set optimal value as x_star
         if k == 0:
             x_star = x_opt
