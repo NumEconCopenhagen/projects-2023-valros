@@ -422,7 +422,7 @@ class LabourModel:
         """
 
         self.par = SimpleNamespace()
-        self.sol = SimpleNamespace()
+        self.sim = SimpleNamespace()
 
     def set_values(self):
         """
@@ -437,7 +437,6 @@ class LabourModel:
 
         # a. call parmeter values
         par = self.par
-        sol = self.sol
 
         # c. set parameter values
         par.eta = 0.5
@@ -449,19 +448,6 @@ class LabourModel:
         par.T = 120
         par.K = 10000
         
-        # d. initialize empty arrays for kappa, iota, the single period, and labour value 
-        sol.log_kappa = np.zeros((par.K, par.T+1))
-        sol.kappa = np.zeros((par.K, par.T+1))
-        sol.iota = np.zeros((par.K, par.T+1))
-        sol.single_period = np.zeros((par.K, par.T+1))
-
-        # e. dertermine shocks for the entire period and calculate kappa
-        np.random.seed(2023)
-        sol.eps = np.random.normal(-0.5*par.sigma**2, par.sigma, (par.K, par.T))
-
-        for t in range(1,par.T+1): # as kappa is 1 in period t=0, we only need to calculate it for t=1,2,...,T+1
-            sol.log_kappa[:,t] = par.rho * sol.log_kappa[:,t-1] + sol.eps[:,t-1]
-        sol.kappa = np.exp(sol.log_kappa)
 
     def numerical_l(self, kappa, do_print=False):
         """
@@ -544,72 +530,133 @@ class LabourModel:
         # e. show the figure
         plt.show()
     
-    @nb.jit(parallel=True, forceobj=True)
-    def policy(self, Delta=0):
-        """
-        Calculates the optimal policy for a given kappa.
-
-        arguments:
-            Delta (float): the maximum difference between the optimal number of hairdressers in two consecutive periods
-
-        returns:
-            l (float): optimal amount of hairdressers
-        """
-
-        # a. call parmeter values
+    def kappa_path(self):
+        # a. set relevant parameters
         par = self.par
-        sol = self.sol
+        sim = self.sim
+        # b. initialize empty arrays for kappa 
+        log_kappa = np.zeros((par.K, par.T+1))
 
-        labour = np.zeros((par.K,par.T+1))
+        # e. dertermine shocks for the entire period and calculate kappa
+        np.random.seed(2023)
+        eps = np.random.normal(-0.5*par.sigma**2, par.sigma, (par.K, par.T))
 
-        for t in range(1, par.T+1):
-            labour[:,t] = ((par.eta*sol.kappa[:,t])/par.w)**(1/(1-par.eta)) 
+        for t in range(1,par.T+1): # as kappa is 1 in period t=0, we only need to calculate it for t=1,2,...,T+1
+            log_kappa[:,t] = par.rho * log_kappa[:,t-1] + eps[:,t-1]
+        sim.kappa = np.exp(log_kappa)
 
-        if Delta != 0:
-            for t in range(1, par.T+1):
-                for k in range(0,par.K):
-                    if np.abs(labour[k,t-1] - labour[k,t]) <= Delta:
-                        labour[k,t] = labour[k,t-1]
+        return sim.kappa
 
 
-        return labour
+@nb.njit(parallel=True)
+def policy(eta, iota, rho, sigma, K, R, T, w, kappa, Delta=0):
+    """
+    Calculates the optimal policy for a given kappa.
 
-    @nb.jit(parallel=True, forceobj=True)
-    def ex_ante(self, labour):
-        """
-        Calculates the ex ante value of the hairsalon.
+    arguments:
+        Delta (float): the maximum difference between the optimal number of hairdressers in two consecutive periods
 
-        arguments:
-            none
+    returns:
+        l (float): optimal amount of hairdressers
+    """
 
-        returns:
-            V (float): the ex ante value of the hairsalon
-        """
+    # a. call parmeter values
 
-        # a. call parmeter values
-        par = self.par
-        sol = self.sol
+    labour = np.zeros((K,T+1))
+    for t in range(1, T+1):
+        labour[:,t] = ((eta*kappa[:,t])/w)**(1/(1-eta)) 
 
-        # e. calculate cost of changing the number of hairdressers
-        for k in range(0,par.K):
-            for t in range(0,par.T+1):
-                if labour[k,t] != labour[k,t-1]:
-                    sol.iota[k,t] = par.iota
+    if Delta != 0:
+        for t in range(1, T+1):
+            for k in range(0,K):
+                if np.abs(labour[k,t-1] - labour[k,t]) <= Delta:
+                    labour[k,t] = labour[k,t-1]
 
-        # f. calculate the single period value
-        for t in range(1, par.T+1):
-            sol.single_period[:,t] = par.R**(-t) * (sol.kappa[:,t]*labour[:,t]**(1-par.eta)-par.w*labour[:,t]-sol.iota[:,t])
+    return labour
 
-        # g. calculate the ex ante value
-        ex_post = np.sum(sol.single_period, axis=1)
-        sol.V = np.mean(ex_post)
+@nb.njit(parallel=True)
+def ex_ante(eta, iota, rho, sigma, K, R, T, w, kappa, labour, do_print=False):
+    """
+    Calculates the ex ante value of the hairsalon.
 
-        return sol.V
+    arguments:
+        none
+
+    returns:
+        V (float): the ex ante value of the hairsalon
+    """
+
+    # a. call parmeter values
+
+    # b. initialize empty arrays for iota, the single period value of salon
+    iota_vec = np.zeros((K, T+1))
+    single_period = np.zeros((K, T+1))
+
+    # e. calculate cost of changing the number of hairdressers
+    for k in range(0,K):
+        for t in range(0,T+1):
+            if labour[k,t] != labour[k,t-1]:
+                iota_vec[k,t] = iota
+
+    # f. calculate the single period value
+    for t in range(1, T+1):
+        single_period[:,t] = R**(-t) * (kappa[:,t]*labour[:,t]**(1-eta)-w*labour[:,t]-iota_vec[:,t])
+
+    # g. calculate the ex ante value
+    ex_post = np.sum(single_period, axis=1)
+    V = np.mean(ex_post)
+
+    # h. print the ex ante value if do_print is True
+    if do_print:
+        print('The ex ante value of the salon is:', V)
+
+    return V
+
+def optimal_delta(eta, iota, rho, sigma, K, R, T, w, kappa, interval=(0,1), do_print=False):
+    # a. call parmeter values
+    param = {'eta':eta, 'iota':iota, 'rho':rho, 'sigma':sigma, 'K':K, 'R':R, 'T':T, 'w':w}
+
+    # b. create objective function for minimization
+    obj = lambda delta: - ex_ante(**param, labour = policy(**param, kappa=kappa, Delta=delta), kappa = kappa)
+
+    # c. minimize the objective function
+    res = optimize.minimize_scalar(obj, bounds=interval, method='bounded')
+
+    # d. print the optimal delta if do_print is True
+    if do_print:
+        print(f'The optimal delta is: {res.x}')
+
+    # e. return the optimal delta
+    return res
+
+@nb.jit(parallel=True, forceobj=True)
+def value_plot(eta, iota, rho, sigma, K, R, T, w, kappa, optimal_delta, interval=(0,1)):
+    # i. create array for delta values and ex ante values
+
+    delta = np.linspace(interval[0],interval[1], 100)
+    ex_ante_vec = np.zeros(100)
+
+    # ii. calculate ex ante value for different delta values
+    for i in range(0,100):
+        labour = policy(eta, iota, rho, sigma, K, R, T, w, kappa=kappa, Delta=delta[i])
+        ex_ante_vec[i] = ex_ante(eta, iota, rho, sigma, K, R, T, w, labour = labour, kappa = kappa)
+        
+    # iii. setup the figure and plot the ex ante value
+    fig = plt.figure()
+    ax = fig.add_subplot(1,1,1)
+    ax.plot(delta, ex_ante_vec, label='Ex ante value')
+    ax.plot(optimal_delta.x, -optimal_delta.fun, 'rx', label='Optimal delta')
+
+    # iv. set labels and title and show the figure
+    ax.set_xlabel(r'$\Delta$')
+    ax.set_ylabel(r'$V$')
+    ax.set_title('Ex ante value of the hairsalon for different values of $\Delta$')
+    ax.legend()
+    plt.show()
 
 
 # functions for problem 3
-
-@nb.njit(parallel=True)
+@nb.njit()
 def griewank(x):
     """
     Returns the value of the Griewank function for a given array x.
@@ -623,7 +670,7 @@ def griewank(x):
 
     return griewank_(x[0],x[1])
 
-@nb.njit(parallel=True)
+@nb.njit()
 def griewank_(x1,x2):
     """
     Griewank function for a given x1 and x2.
@@ -682,7 +729,7 @@ def griewank_minimizer(brackets = [-600,600], tau = 10**(-8), warm_up_K = 10, K 
         if griewank(x_star) < tau:
             value = griewank(x_star)
             if do_print:
-                print(f'The global minimum is approximately: f = {value:.2e}\n' 
+                print('The global minimum is approximately: f = {value:.2e}\n' 
                       f'The solution is x_1 = {x_star[0]:.2e} and x_2 = {x_star[1]:.2e} \n'
                       f'Iterations: {k}')
             # 4. return x_star as x_star and k as number of iterations as a dictionary
