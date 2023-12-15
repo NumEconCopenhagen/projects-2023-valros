@@ -288,6 +288,7 @@ def portfolio(df, print_df = False):
 
     # c. running a loop for each ticker
     tickers = df.ticker.unique()
+    results_df = pd.DataFrame()  # make sure results_df is defined
     for ticker in tickers:
         ticker_df = df[df['ticker'] == ticker].reset_index()
         for i in range(len(ticker_df)):
@@ -302,7 +303,7 @@ def portfolio(df, print_df = False):
                 elif ticker_df.loc[i, 'action'] == 'sale_full':
                     ticker_df.loc[i, 'share_change'] = - ticker_df.loc[i-1, 'shares_owned']
                 ticker_df.loc[i, 'shares_owned'] = ticker_df.loc[i-1, 'shares_owned'] + ticker_df.loc[i, 'share_change'] # should give 0
-        results_df = results_df.append(ticker_df)
+        results_df = pd.concat([results_df, ticker_df])
         
     results_df = results_df.reset_index(drop=True)
     results_df = results_df.drop(columns=['index'])
